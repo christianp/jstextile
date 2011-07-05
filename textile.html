@@ -5,9 +5,17 @@
 		<script src="jquery.js"></script>
 		<link rel="stylesheet" href="qunit.css" type="text/css" media="screen" />
 		<script type="text/javascript" src="qunit.js"></script>
+		<script type="text/javascript" src="textile.js"></script>
 
 		<script>
 			$(document).ready(function(){
+				test("Writing in textile #1",function() {
+					equals( textile("A single paragraph.\n\nFollowed by another."), '<p>A single paragraph.</p>\n\n<p>Followed by another.</p>', "Each line of text should be in a <p> tag");
+				});
+
+				test("Using HTML in Textile",function() {
+					equals( textile("I am <b>very</b> serious.\n\n<pre>\n  I am <b>very</b> serious.\n</pre>"), "<p>I am <b>very</b> serious.</p>\n\n<pre>\nI am &lt; b&gt; very&lt;/b&gt; serious.\n</pre>", "HTML should be retained.");
+				});
 			});
 		</script>
 	</head>
