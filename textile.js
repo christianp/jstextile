@@ -27,40 +27,62 @@ var textile;
 	re_block = re_block.join('|');
 	re_block = new RegExp('^('+re_block+')'+re_attr.source+'\\.(\\.)? ');
 
+	var re_html = /^(<\/?\w+((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)\/?>\s*)+$/m;
+	var re_endhtml = /(<\/?\w+((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)\/?>\s*)+$/m;
+
 	function makeTag(tagName,m)
 	{
-		var tag = $('<'+tagName+' />');
-		if(m[1])
-			tag.addClass(m[1]);
-		if(m[2])
-			tag.attr('id',m[2]);
-		if(m[3])
-			tag.attr('style',m[3]);
-		if(m[4])
-			tag.attr('lang',m[4]);
+		tagName = blockModifiers[tagName];
+		var tag = $('<'+tagName+'/>');
+		var open = '<'+tagName;
+		var close = '</'+tagName+'>';
+		var carryon = false;
 
-		switch(m[5])
+		if(m)
 		{
-		case '<':
-			tag.css('text-align','left');
-			break;
-		case '>':
-			tag.css('text-align','right');
-			break;
-		case '=':
-			tag.css('text-align','center');
-			break;
-		case '<>':
-			tag.css('text-align','justify');
-			break;
+			if(m[1])
+				open += ' class="'+m[1]+'"';
+			if(m[2])
+				open += ' id="'+m[2]+'"';
+			if(m[3])
+				tag.attr('style',m[3]);
+			if(m[4])
+				open += ' lang="'+m[4]+'"';
+
+			switch(m[5])
+			{
+			case '<':
+				tag.css('text-align','left');
+				break;
+			case '>':
+				tag.css('text-align','right');
+				break;
+			case '=':
+				tag.css('text-align','center');
+				break;
+			case '<>':
+				tag.css('text-align','justify');
+				break;
+			}
+
+			if(m[6])
+				tag.css('padding-left',m[6].length+'em');
+			if(m[7])
+				tag.css('padding-right',m[7].length+'em');
+			if(m[8])
+				carryon = true;
 		}
 
-		if(m[6])
-			tag.css('padding-left',m[6].length+'em');
-		if(m[7])
-			tag.css('padding-right',m[7].length+'em');
-		return tag;
+		if(css = tag.attr('style'))
+			open += ' style="'+css+'"';
+
+		open += '>';
+
+		var out = {name: tagName, open: open, close: close, carryon: carryon};
+
+		return out;
 	}
+	var para = makeTag('p');
 
 	function TextileConverter(src)
 	{
@@ -73,22 +95,56 @@ var textile;
 		convert: function() {
 			while( this.src.length )
 			{
-				this.readBlock();
+				var block = this.getBlock();
+				this.doBlock(block);
 			}
-			return this.blocks.join('\n\n');
+			return this.out.trim();
 		},
 
-		readBlock: function() {
+		outBlock: function(block) {
+			if(!block.length)
+				return;
+			this.out+=block+'\n\n';
+		},
+
+		outLine: function(line) {
+			if(!line.length)
+				return;
+			this.out+=line+'\n';
+		},
+
+		getBlock: function() {
 			this.src = this.src.trim();
-			console.log(this.src);
 			var i = this.src.search('\n\n');
 			if(i==-1)
 				i=this.src.length;
 			var block = this.src.slice(0,i).trim();
-			console.log(i);
 			this.src = this.src.slice(i+2);
+			return block;
+		},
 
+		doBlock: function(block) {
 			var tag;
+			var carryon = false;
+			var m;
+			var html='';
+
+			if(m=block.match(re_html))
+			{
+				this.outLine(m[0]);
+				block = block.slice(m[0].length).trim();
+				if(!block.length)
+					return;
+			}
+			if(m=block.match(re_endhtml))
+			{
+				html = m[0];
+				block=block.slice(0,block.length-m[0].length).trim();
+				console.log(html);
+				console.log(block);
+			}
+
+
 			if(m=block.match(re_block))
 			{
 				var match = m[0];
@@ -96,25 +152,54 @@ var textile;
 				var tagName = m[1];
 				m = m.slice(1);
 				tag = makeTag(tagName,m);
+				if(m[8])
+					carryon = true;
 			}
 			else if(this.oldtag)
 			{
-				tag = this.oldtag.clone();
+				tag = this.oldtag;
 			}
 			else
 			{
-				tag = $('<p/>');
+				tag = para;
 			}
 
+			block = this.doSpan(block);
 
-			tag.html(block);
+			if(tag.name=='blockquote')
+			{
+				block = tag.open+'<p>'+block+'</p>';
+				tag = para;
+				var bq = true;
+			}
+			else
+				block = tag.open+block+tag.close;
 
-			var d = $('<div/>');
-			d.append(tag);
-			this.blocks.push(d.html());
+			this.outBlock(block);
 
-			return block;
+			if(carryon)
+			{
+				this.oldtag = tag;
+				while(!this.src.match(re_block))
+				{
+					this.doBlock(this.getBlock());
+				}
+			}
+
+			if(bq)
+				this.blocks[this.blocks.length-1]+='</blockquote>';
+
+			if(html.length)
+			{
+				this.out=this.out.slice(0,this.out.length-1);
+				this.outBlock(html);
+			}
 		},
+
+		doSpan: function(span)
+		{
+			return span;
+		}
 	};
 
 //})();
