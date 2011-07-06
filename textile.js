@@ -5,116 +5,38 @@ var textile;
 		return tc.convert();
 	};
 
-
-	var blockModifiers = {
-		'h1': 'h1',
-		'h2': 'h2',
-		'h3': 'h3',
-		'h4': 'h4',
-		'h5': 'h5',
-		'h6': 'h6',
-		'bq': 'blockquote',
-		'p': 'p',
-		'table': 'table',
-		'div': 'div'
-	};
-	var re_attr = /(?:\((-?[_a-zA-Z]+[_a-zA-Z0-9-]*)?(?:#(-?[_a-zA-Z]+[_a-zA-Z0-9-]*))?\))?(?:\{(.*?)\})?(?:\[(.*?)\])?(<|>|=|<>)?(\(+)?(\)+)?/;
-	var re_block = [];
-	for(var x in blockModifiers)
-	{
-		re_block.push(x);
-	}
-	re_block = re_block.join('|');
-	re_block = new RegExp('^('+re_block+')'+re_attr.source+'\\.(\\.)? ');
-
-	var re_html = /^(<\/?\w+((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)\/?>\s*)+$/m;
-	var re_endhtml = /(<\/?\w+((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)\/?>\s*)+$/m;
-
-	function makeTag(tagName,m)
-	{
-		tagName = blockModifiers[tagName];
-		var tag = $('<'+tagName+'/>');
-		var open = '<'+tagName;
-		var close = '</'+tagName+'>';
-		var carryon = false;
-
-		if(m)
-		{
-			if(m[1])
-				open += ' class="'+m[1]+'"';
-			if(m[2])
-				open += ' id="'+m[2]+'"';
-			if(m[3])
-				tag.attr('style',m[3]);
-			if(m[4])
-				open += ' lang="'+m[4]+'"';
-
-			switch(m[5])
-			{
-			case '<':
-				tag.css('text-align','left');
-				break;
-			case '>':
-				tag.css('text-align','right');
-				break;
-			case '=':
-				tag.css('text-align','center');
-				break;
-			case '<>':
-				tag.css('text-align','justify');
-				break;
-			}
-
-			if(m[6])
-				tag.css('padding-left',m[6].length+'em');
-			if(m[7])
-				tag.css('padding-right',m[7].length+'em');
-			if(m[8])
-				carryon = true;
-		}
-
-		if(css = tag.attr('style'))
-			open += ' style="'+css+'"';
-
-		open += '>';
-
-		var out = {name: tagName, open: open, close: close, carryon: carryon};
-
-		return out;
-	}
-	var para = makeTag('p');
-
 	function TextileConverter(src)
 	{
-		this.osrc = this.src = src;
+		this.osrc = this.src = src.trim();
 		this.out = '';
 		this.blocks = [];
 	}
 	TextileConverter.prototype = {
 
 		convert: function() {
+			console.log(".......");
+			this.src = this.src.trim();
 			while( this.src.length )
 			{
-				var block = this.getBlock();
-				this.doBlock(block);
+				console.log(this.src);
+				for(var i=0;i<blockTypes.length;i++)
+				{
+					if(blockTypes[i].match.apply(this))
+					{
+						blockTypes[i].do.apply(this);
+						break;
+					}
+				}
+				if(i==blockTypes.length)
+					throw(new Error("Error - couldn't match any block type for:\n\n"+this.src));
+
+				this.out += '\n\n';
+				this.src = this.src.trim();
 			}
 			return this.out.trim();
 		},
 
-		outBlock: function(block) {
-			if(!block.length)
-				return;
-			this.out+=block+'\n\n';
-		},
-
-		outLine: function(line) {
-			if(!line.length)
-				return;
-			this.out+=line+'\n';
-		},
-
 		getBlock: function() {
-			this.src = this.src.trim();
 			var i = this.src.search('\n\n');
 			if(i==-1)
 				i=this.src.length;
@@ -123,83 +45,250 @@ var textile;
 			return block;
 		},
 
-		doBlock: function(block) {
-			var tag;
-			var carryon = false;
-			var m;
-			var html='';
-
-			if(m=block.match(re_html))
-			{
-				this.outLine(m[0]);
-				block = block.slice(m[0].length).trim();
-				if(!block.length)
-					return;
-			}
-			if(m=block.match(re_endhtml))
-			{
-				html = m[0];
-				block=block.slice(0,block.length-m[0].length).trim();
-				console.log(html);
-				console.log(block);
-			}
-
-
-			if(m=block.match(re_block))
-			{
-				var match = m[0];
-				block = block.slice(match.length);
-				var tagName = m[1];
-				m = m.slice(1);
-				tag = makeTag(tagName,m);
-				if(m[8])
-					carryon = true;
-			}
-			else if(this.oldtag)
-			{
-				tag = this.oldtag;
-			}
-			else
-			{
-				tag = para;
-			}
-
-			block = this.doSpan(block);
-
-			if(tag.name=='blockquote')
-			{
-				block = tag.open+'<p>'+block+'</p>';
-				tag = para;
-				var bq = true;
-			}
-			else
-				block = tag.open+block+tag.close;
-
-			this.outBlock(block);
-
-			if(carryon)
-			{
-				this.oldtag = tag;
-				while(!this.src.match(re_block))
-				{
-					this.doBlock(this.getBlock());
-				}
-			}
-
-			if(bq)
-				this.blocks[this.blocks.length-1]+='</blockquote>';
-
-			if(html.length)
-			{
-				this.out=this.out.slice(0,this.out.length-1);
-				this.outBlock(html);
-			}
-		},
-
-		doSpan: function(span)
-		{
+		convertSpan: function(span) {
+			span = span.replace('\n','<br />\n');
 			return span;
 		}
 	};
+
+
+	// array containing all block types.
+	// Contains objects of the form
+	//	{
+	//		match: function()			//returns true if source begins with this kind of block
+	//		do: function()				//perform appropriate conversion on the block
+	//	}
+	// the functions are applied in the context of the TextileConverter object, so read in from this.src and output to this.out
+	// the 'do' function should remove the block it converted from this.src
+	// if you're adding another block type, add it to the start of this array
+	var blockTypes = [];
+
+	//matches attribute modifier strings
+	//use getAttributes to parse this into actual values
+	/*
+		/(
+			(?:
+				<|>|=|<>|												justification
+				\(+(?!\w)|\)+|											padding
+				(?:\([^\#\)]*(?:\#(?:[a-zA-Z]+[_a-zA-Z0-9-:.]*))?\))|	class & id
+				\{.*?\}|												style
+				\[.*?\]													language
+			)*
+		)/
+	*/
+	var re_attr = /((?:<|>|=|<>|\(+(?!\w)|\)+|(?:\([^#\)]*(?:#(?:[a-zA-Z]+[_a-zA-Z0-9-:.]*))?\))|\{.*?\}|\[.*?\])+)/;
+
+	//get individual modifers from attribute strings
+	var re_attrAlign = /<>|<|>|=/;
+	re_attrAlign.values = {
+		'<': 'left',
+		'>': 'right',
+		'<>': 'justify',
+		'=': 'center'
+	};
+	var re_attrLeftPadding = /\(/g;
+	var re_attrRightPadding = /\)/g;
+	var re_attrClassId = /\(([^\(#\)]*)(?:#([a-zA-Z]+[_a-zA-Z0-9-:.]*))?\)/g;
+	var re_attrClassIdSingle = new RegExp(re_attrClassId.source);	//only matches a single class/id modifier and gives back the class and id parts separately
+	var re_attrStyle = /\{(.*?)\}/;
+	var re_attrLanguage = /\[(.*?)\]/;
+
+	//parse an attribute-modifier string into an attributes object
+	function getAttributes(attr)
+	{
+		if(!attr)
+			return {};
+
+		var opt = {
+			style: ''
+		};
+
+		var paddingLeft=0, paddingRight=0;
+
+		var m;
+
+		if(m=re_attrStyle.exec(attr))
+		{
+			var style = m[1];
+			if(!/;$/.test(style))
+				style+=';'
+			opt['style'] = style;
+		}
+		if(m=re_attrLanguage.exec(attr))
+		{
+			opt['language'] = m[1];
+		}
+		if(m=attr.match(re_attrLeftPadding))
+		{
+			paddingLeft += m.length;
+		}
+		if(m=attr.match(re_attrRightPadding))
+		{
+			paddingRight += m.length;
+		}
+		if(m=attr.match(re_attrClassId))
+		{
+			paddingLeft -= m.length;
+			paddingRight -= m.length;
+			m=re_attrClassIdSingle.exec(m[0]);
+			if(m[1])
+				opt['class'] = m[1];
+			if(m[2])
+				opt['id'] = m[2];
+		}
+		if(paddingLeft>0)
+			opt['style'] += 'padding-left:'+paddingLeft+'em;';
+		if(opt['padding-right']>0)
+			opt['style'] += 'padding-right:'+paddingRight+'em;';
+		if(m=re_attrAlign.exec(attr))
+		{
+			opt['style'] += 'text-align:'+re_attrAlign.values[m[0]]+';';
+		}
+
+		return opt;
+	}
+
+	var re_anyBlock = new RegExp('^[a-zA-Z][a-zA-Z0-9]'+re_attr.source+'?\.+ ');
+
+	var re_blockquote = new RegExp('^bq'+re_attr.source+'?\\.(\\.)?(?::(\\S+))? ');
+	var blockquote = {
+		match: function() { return re_blockquote.test(this.src);},
+		do: function() {
+			console.log("blockquote");
+			var m = this.src.match(re_blockquote);
+			var attr = getAttributes(m[1]);
+			if(m[3])
+				attr.cite = m[3];
+			var tag = this.makeTag('blockquote',attr);
+			var carryon = m[2]!=undefined;
+
+			this.src = this.src.slice(m[0].length);
+			console.log(this.src);
+			var block = this.getBlock();
+			block = this.convertSpan(block);
+			this.out += tag.open+'\n<p>'+block+'</p>';
+
+			if(carryon)
+			{
+				console.log("carryon");
+				while(this.src.length && !re_anyBlock.test(this.src))
+				{
+					var block = this.getBlock();
+					block = this.convertSpan(block);
+					this.out += '\n<p>'+block+'</p>';
+				}
+			}
+			this.out += '\n</blockquote>';
+		}
+	};
+	blockTypes.push(blockquote);
+
+	//normal block modifiers
+	var blocks = ['h1','h2','h3','h4','h5','h6','p','div'];
+	//add in any other normal block types here
+	var re_block = new RegExp('^('+blocks.join('|')+')'+re_attr.source+'?.(.)? ');
+	var normalBlock = {
+		match: function() {return re_block.test(this.src);},
+
+		do: function() {
+			console.log("normal");
+			var m = this.src.match(re_block);
+			var tagName = m[1];
+			var attr = getAttributes(m[2]);
+			var tag = this.makeTag(tagName,attr);
+			var carryon = m[3]!=undefined;
+
+			this.src = this.src.slice(m[0].length);
+			var block = this.getBlock();
+			block = this.convertSpan(block);
+			this.out += tag.open+block+tag.close;
+
+			if(carryon)
+			{
+				console.log("carryon");
+				while(this.src.length && !re_anyBlock.test(this.src))
+				{
+					var block = this.getBlock();
+					block = this.convertSpan(block);
+					this.out += '\n'+tag.open+block+tag.close;
+				}
+			}
+		}
+	}
+	blockTypes.push(normalBlock);
+
+	var re_pre = /^<pre((?:\s+\w+(?:\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>((?:.|\n(?!\n))*)<\/pre>(?:\n\n|$)/;
+	var preBlock = {
+		match: function() { return re_pre.test(this.src);},
+		do: function() {
+			console.log("pre");
+			var m = re_pre.exec(this.src);
+			this.src = this.src.slice(m[0].length);
+
+			var attr = m[1];
+			var code = this.escapeHTML(m[2]);
+			this.out += '<pre'+attr+'>'+code+'</pre>';
+		}
+	};
+	blockTypes.push(preBlock);
+
+
+	var re_html = /^<(\w+)((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>(.|\n(?!\n))*<\/\1>(\n\n|$)/;
+	var htmlBlock = {
+		match: function() { return re_html.test(this.src);},
+		do: function() {
+			console.log("html");
+			var html = re_html.exec(this.src)[0];
+			this.src = this.src.slice(html.length);
+			this.out += html;
+		}
+	};
+	blockTypes.push(htmlBlock);
+
+
+	var plainBlock = {
+		match: function() { return true;},
+		do: function() {
+			console.log("plain");
+			var block = this.getBlock();
+			block = this.convertSpan(block);
+			this.out += para.open+block+para.close;
+		}
+	}
+
+	blockTypes.push(plainBlock);
+
+	TextileConverter.prototype.makeTag = function(tagName,attr)
+	{
+		var open = '<'+tagName;
+		for(var x in attr)
+		{
+			open+=' '+x+'="'+attr[x]+'"';
+		}
+		open+='>';
+		var close = '</'+tagName+'>';
+		return {open: open, close: close, name: tagName};
+	}
+	var para = TextileConverter.prototype.makeTag('p');
+
+	var htmlEscapes = [
+		'&', '&#38;',
+		'<', '&#60;',
+		'>', '&#62;',
+		"'", '&#39;',
+		'"', '&#34;'
+	]
+	for(var i=0;i<htmlEscapes.length;i+=2)
+	{
+		htmlEscapes[i] = new RegExp(htmlEscapes[i],'g');
+	}
+	TextileConverter.prototype.escapeHTML = function(html)
+	{
+		for(var i=0;i<htmlEscapes.length;i+=2)
+		{
+			html = html.replace(htmlEscapes[i],htmlEscapes[i+1]);
+		}
+		return html;
+	}
 
 //})();
