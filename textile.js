@@ -45,6 +45,15 @@ var textile;
 			return block;
 		},
 
+		getLine: function() {
+			var i = this.src.search('\n');
+			if(i==-1)
+				i = this.src.length;
+			var line = this.src.slice(0,i).trim();
+			this.src = this.src.slice(i+2);
+			return line;
+		},
+
 		convertSpan: function(span) {
 			span = span.replace('\n','<br />\n');
 			return span;
@@ -148,7 +157,7 @@ var textile;
 		return opt;
 	}
 
-	var re_anyBlock = new RegExp('^[a-zA-Z][a-zA-Z0-9]'+re_attr.source+'?\.+ ');
+	var re_anyBlock = new RegExp('^[a-zA-Z][a-zA-Z0-9]*'+re_attr.source+'?\\.+ ');
 
 	var re_blockquote = new RegExp('^bq'+re_attr.source+'?\\.(\\.)?(?::(\\S+))? ');
 	var blockquote = {
@@ -157,16 +166,17 @@ var textile;
 			console.log("blockquote");
 			var m = this.src.match(re_blockquote);
 			var attr = getAttributes(m[1]);
+			var tag = this.makeTag('p',attr);
 			if(m[3])
 				attr.cite = m[3];
-			var tag = this.makeTag('blockquote',attr);
+			var btag = this.makeTag('blockquote',attr);
 			var carryon = m[2]!=undefined;
 
 			this.src = this.src.slice(m[0].length);
 			console.log(this.src);
 			var block = this.getBlock();
 			block = this.convertSpan(block);
-			this.out += tag.open+'\n<p>'+block+'</p>';
+			this.out += btag.open+'\n'+tag.open+block+tag.close;
 
 			if(carryon)
 			{
@@ -175,13 +185,76 @@ var textile;
 				{
 					var block = this.getBlock();
 					block = this.convertSpan(block);
-					this.out += '\n<p>'+block+'</p>';
+					this.out += '\n'+tag.open+block+tag.close;
 				}
 			}
-			this.out += '\n</blockquote>';
+			this.out += '\n'+btag.close;
 		}
 	};
 	blockTypes.push(blockquote);
+
+	var re_blockcode = new RegExp('^bc'+re_attr.source+'?\\.(\\.)? ');
+	var blockcode = {
+		match: function() { return re_blockcode.test(this.src);},
+		do: function() {
+			console.log("blockcode");
+			var m = this.src.match(re_blockcode);
+			var attr = getAttributes(m[1]);
+			var tag = this.makeTag('code',attr);
+			if(m[3])
+				attr.cite = m[3];
+			var btag = this.makeTag('pre',attr);
+			var carryon = m[2]!=undefined;
+
+			this.src = this.src.slice(m[0].length);
+			console.log(this.src);
+			var block = this.getBlock();
+			block = this.escapeHTML(block);
+			this.out += btag.open+tag.open+block+'\n'+tag.close;
+
+			if(carryon)
+			{
+				console.log("carryon");
+				while(this.src.length && !re_anyBlock.test(this.src))
+				{
+					var block = this.getBlock();
+					block = this.escapeHTML(block);
+					this.out += '\n'+tag.open+block+'\n'+tag.close;
+				}
+			}
+			this.out += btag.close;
+		}
+	};
+	blockTypes.push(blockcode);
+
+	var re_pre = new RegExp('^pre'+re_attr.source+'?\.(\.)? ');
+	var preBlock = {
+		match: function() { return re_pre.test(this.src);},
+		do: function() {
+			console.log("pre");
+			var m = re_pre.exec(this.src);
+			this.src = this.src.slice(m[0].length);
+			var attr = getAttributes(m[1]);
+			var tag = this.makeTag('pre',attr);
+			var carryon = m[2]!=undefined;
+
+
+			var block = this.getBlock();
+
+			if(carryon)
+			{
+				console.log("carryon");
+				while(this.src.length && !re_anyBlock.test(this.src))
+				{
+					block += '\n\n' + this.getBlock();
+				}
+			}
+			block = this.escapeHTML(block);
+			
+			this.out += tag.open+block+'\n'+tag.close;
+		}
+	};
+	blockTypes.push(preBlock);
 
 	//normal block modifiers
 	var blocks = ['h1','h2','h3','h4','h5','h6','p','div'];
@@ -217,12 +290,12 @@ var textile;
 	}
 	blockTypes.push(normalBlock);
 
-	var re_pre = /^<pre((?:\s+\w+(?:\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>((?:.|\n(?!\n))*)<\/pre>(?:\n\n|$)/;
-	var preBlock = {
-		match: function() { return re_pre.test(this.src);},
+	var re_preHTML = /^<pre((?:\s+\w+(?:\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>((?:.|\n(?!\n))*)<\/pre>(?:\n\n|$)/;
+	var preHTMLBlock = {
+		match: function() { return re_preHTML.test(this.src);},
 		do: function() {
-			console.log("pre");
-			var m = re_pre.exec(this.src);
+			console.log("preHTML");
+			var m = re_preHTML.exec(this.src);
 			this.src = this.src.slice(m[0].length);
 
 			var attr = m[1];
@@ -230,7 +303,7 @@ var textile;
 			this.out += '<pre'+attr+'>'+code+'</pre>';
 		}
 	};
-	blockTypes.push(preBlock);
+	blockTypes.push(preHTMLBlock);
 
 
 	var re_html = /^<(\w+)((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>(.|\n(?!\n))*<\/\1>(\n\n|$)/;
@@ -255,7 +328,6 @@ var textile;
 			this.out += para.open+block+para.close;
 		}
 	}
-
 	blockTypes.push(plainBlock);
 
 	TextileConverter.prototype.makeTag = function(tagName,attr)
@@ -263,7 +335,8 @@ var textile;
 		var open = '<'+tagName;
 		for(var x in attr)
 		{
-			open+=' '+x+'="'+attr[x]+'"';
+			if(attr[x])
+				open+=' '+x+'="'+attr[x]+'"';
 		}
 		open+='>';
 		var close = '</'+tagName+'>';

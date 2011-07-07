@@ -13,20 +13,38 @@
 					equals( textile("A single paragraph.\n\nFollowed by another."), '<p>A single paragraph.</p>\n\n<p>Followed by another.</p>', "Each line of text should be in a <p> tag");
 				});
 
-				test("Block modifiers",function() {
-					equals( textile("p. para\n\nh1. heading 1\n\nh2. heading 2\n\nh3. heading 3\n\nh4. heading 4\n\nh5. heading 5\n\nh6. heading 6"), "<p>para</p>\n\n<h1>heading 1</h1>\n\n<h2>heading 2</h2>\n\n<h3>heading 3</h3>\n\n<h4>heading 4</h4>\n\n<h5>heading 5</h5>\n\n<h6>heading 6</h6>","Should modify each tag's type appropriately");
-				});
-
-				test("Quoted block of text",function() {
+				test("Blocks",function() {
+					equals( textile('h1. Heading 1'), '<h1>Heading 1</h1>');
+					equals( textile('h2. Heading 2'), '<h2>Heading 2</h2>');
+					equals( textile('h3. Heading 3'), '<h3>Heading 3</h3>');
+					equals( textile('h4. Heading 4'), '<h4>Heading 4</h4>');
+					equals( textile('h5. Heading 5'), '<h5>Heading 5</h5>');
+					equals( textile('h6. Heading 6'), '<h6>Heading 6</h6>');
+					equals( textile('p. A paragraph.\nContinued.\n\nAlso a paragraph.'),'<p>A paragraph.<br />\nContinued.</p>\n\n<p>Also a paragraph.</p>','Any paragraph without a block modifier should automatically be enclosed with p tags.');
+					
 					equals( textile("bq. A quotation.\nContinued.\n\nRegular paragraph."), "<blockquote>\n<p>A quotation.<br />\nContinued.</p>\n</blockquote>\n\n<p>Regular paragraph.</p>","Should put bq part inside a blockquote tag, and a p tag");
+					equals( textile("bq.:http://checkmyworking.com A cited quotation."), '<blockquote cite="http://checkmyworking.com">\n<p>A cited quotation.</p>\n</blockquote>', "Should add cite attribute to blockquote");
+
+					var fn = textile('A footnote reference[1].\n\nfn1. The footnote.');
+					var re = /<p>A footnote reference<sup class="footnote"><a href="#fn[a-zA-Z0-9]+">1<\/a><\/sup>.<\/p>\n\n<p id="fn[a-zA_Z0-9]+" class="footnote"><sup>1<\/sup> The footnote.<\/p>/;
+					ok(re.test(fn),'Footnotes are represented by the fn1.,fn2.,... block modifiers '+fn);
+
+					equals( textile('bc. <script>\n// a Javascript example\nalert("Hello World");\n<\/script>'),'<pre><code>&#60;script&#62;\n// a Javascript example\nalert(&#34;Hello World&#34;);\n&#60;/script&#62;\n</code></pre>','XHTML significant characters such as < and > should be escaped within the code blocks.');
+					equals( textile('pre. Pre-formatted\ntext'),'<pre>Pre-formatted\ntext\n</pre>','Pre-formatted text.');
+					equals( textile('notextile. <script type="text/javascript">\ndocument.write("Hello World!");\n<\/script>\n<noscript>Your browser doesn\'t support Javascript<\/noscript>'),'<script type="text/javascript">\ndocument.write("Hello World!");\n<\/script>\n<noscript>Your browser doesn\'t support Javascript<\/noscript>','Raw XHTML characters should be passed through untouched.');
 				});
 
-				test("A cited quotation.", function() {
-					equals( textile("bq.:http://checkmyworking.com A cited quotation."), '<blockquote cite="http://checkmyworking.com">\n<p>A cited quotation.</p>\n</blockquote>', "Should add cite attribute to blockquote");
-				});
 
 				test("Using HTML in Textile",function() {
 					equals( textile("I am <b>very</b> serious.\n\n<pre>\n  I am <b>very</b> serious.\n</pre>"), "<p>I am <b>very</b> serious.</p>\n\n<pre>\n  I am &#60;b&#62;very&#60;/b&#62; serious.\n</pre>", "HTML should be retained.");
+				});
+
+				test("Extended blocks", function() {
+					equals( textile("bq.. A quote.\n\nThe quote continued.\n\np. Back to paragraph text."),'<blockquote>\n<p>A quote.</p>\n<p>The quote continued.</p>\n</blockquote>\n\n<p>Back to paragraph text.</p>',"First two blocks should be in blockquote, third should be a paragraph.");
+					equals( textile("A PHP code example.\n\nbc.. <?php\nfunction hello() {\n// display a hello message\n\nprint \"Hello, World\";\n}\n?>\n\np. Following paragraph."),'<p>A <span class="caps">PHP</span> code example.</p>\n\n<pre><code>&#60;?php\nfunction hello() {\n// display a hello message\n</code>\n<code>print &#34;Hello, World&#34;;\n}\n?&#62;\n</code></pre>\n\n<p>Following paragraph.</p>','Long example of code containing blank lines.');
+					equals( textile('p(myclass).. A classy paragraph.\n\nAnother classy paragraph.\n\np. Not so classy.'),'<p class="myclass">A classy paragraph.</p>\n<p class="myclass">Another classy paragraph.</p>\n\n<p>Not so classy.</p>',"Any block attributes on an extended block should be included on each following block.");
+					equals( textile('bq(myclass).. Quote paragraph 1.\n\nParagraph 2.'),'<blockquote class="myclass">\n<p class="myclass">Quote paragraph 1.</p>\n<p class="myclass">Paragraph 2.</p>\n</blockquote>','Attributes on bq.. and bc.. extended blocks should be included on both the inner and outer blocks.');
+					equals( textile('bc(myclass).. Code block 1.\n\nCode block 2.'),'<pre class="myclass"><code class="myclass">Code block 1.\n</code>\n<code class="myclass">Code block 2.\n</code></pre>','Attributes on bq.. and bc.. extended blocks should be included on both the inner and outer blocks.');
 				});
 			});
 		</script>
