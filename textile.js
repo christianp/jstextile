@@ -9,16 +9,16 @@ var textile;
 	{
 		this.osrc = this.src = src.trim();
 		this.out = '';
-		this.blocks = [];
+		this.footnotes = [];
 	}
 	TextileConverter.prototype = {
 
 		convert: function() {
-			console.log(".......");
+			//console.log(".......");
 			this.src = this.src.trim();
 			while( this.src.length )
 			{
-				console.log(this.src);
+				//console.log(this.src);
 				for(var i=0;i<blockTypes.length;i++)
 				{
 					if(blockTypes[i].match.apply(this))
@@ -52,6 +52,13 @@ var textile;
 			var line = this.src.slice(0,i).trim();
 			this.src = this.src.slice(i+1);
 			return line;
+		},
+
+		footnoteID: function(n) {
+			if(!this.footnotes[n])
+				this.footnotes[n] = 'fn'+(Math.random()+'').slice(2)+(new Date()).getTime();
+
+			return this.footnotes[n];
 		},
 
 		convertSpan: function(span) {
@@ -134,7 +141,7 @@ var textile;
 		if(m=re_attrStyle.exec(attr))
 		{
 			var style = m[1];
-			if(!/;$/.test(style))
+			if(style.length && !/;$/.test(style))
 				style+=';'
 			opt['style'] = style;
 		}
@@ -179,7 +186,6 @@ var textile;
 	var list = {
 		match: function() { return re_list.test(this.src); },
 		do: function() {
-			console.log('list');
 			var m;
 			var listType = '';
 			var tags = [], level=0, tag, listType='';
@@ -212,11 +218,8 @@ var textile;
 						this.out += listItem.close;
 					this.out+='\n'
 				}
-				console.log(listType,llevel);
-
 				if(llevel > level || m[2])
 				{
-					console.log('up');
 					if(tag)
 						tags.push({level: level, tag: tag});
 					var attr = getAttributes(m[2]);
@@ -227,7 +230,6 @@ var textile;
 				this.src = this.src.slice(m[0].length);
 				var line = this.getLine();
 				line = this.convertSpan(line);
-				console.log(' '+line);
 				this.out += listItem.open+line;
 			}
 			this.out += listItem.close+'\n';
@@ -236,10 +238,57 @@ var textile;
 				this.out +=tag.close+listItem.close+'\n';
 				tag = tags.pop().tag;
 			}
-			this.out += tag.close+'\n\n';
+			this.out += tag.close;
 		}
 	};
 	blockTypes.push(list);
+
+	var re_table = new RegExp('^(table'+re_attr.source+'?\. *\\n)?(\\|.*\\|\\n?)+(?:\\n\\n|$)');
+	var re_tableRow = /^\|.*|(?:\n|$)/;
+	var table = {
+		match: function() { return re_table.test(this.src); },
+		do: function() {
+			var m = re_table.exec(this.src);
+			if(m[1])
+			{
+				var attr = m[2];
+				tableTag = this.makeTag('table',attr);
+			}
+			else
+				tableTag = this.makeTag('table');
+			this.out += tableTag.open+'\n';
+
+		}
+	};
+
+	var re_footnote = new RegExp('^fn(\\d+)'+re_attr.source+'?\\.(\\.)? ');
+	var footnote = {
+		match: function() { return re_footnote.test(this.src); },
+		do: function() {
+			var m = this.src.match(re_footnote);
+			var n = parseInt(m[1]);
+			var attr = getAttributes(m[2]);
+			attr.id = this.footnoteID(n);
+			var tag = this.makeTag('p',attr);
+			var carryon = m[3]!=undefined;
+
+			this.src = this.src.slice(m[0].length);
+			var block = this.getBlock();
+			block = this.convertSpan(block);
+			this.out += tag.open+block+tag.close;
+
+			if(carryon)
+			{
+				while(this.src.length && !re_anyBlock.test(this.src))
+				{
+					var block = this.getBlock();
+					block = this.convertSpan(block);
+					this.out += '\n'+tag.open+block+tag.close;
+				}
+			}
+		}
+	};
+	blockTypes.push(footnote);
 
 	var re_blockquote = new RegExp('^bq'+re_attr.source+'?\\.(\\.)?(?::(\\S+))? ');
 	var blockquote = {
@@ -331,6 +380,28 @@ var textile;
 	blockTypes.push(preBlock);
 
 	var re_notextile = new RegExp('^notextile'+re_attr.source+'?\.(\.)? ');
+	var notextile = {
+		match: function() {return re_notextile.test(this.src);},
+
+		do: function() {
+			var m = this.src.match(re_notextile);
+			var carryon = m[2]!=undefined;
+
+			this.src = this.src.slice(m[0].length);
+			var block = this.getBlock();
+			this.out += block;
+
+			if(carryon)
+			{
+				while(this.src.length && !re_anyBlock.test(this.src))
+				{
+					var block = this.getBlock();
+					this.out += '\n\n'+block;
+				}
+			}
+		}
+	}
+	blockTypes.push(notextile);
 
 	//normal block modifiers
 	var blocks = ['h1','h2','h3','h4','h5','h6','p','div'];

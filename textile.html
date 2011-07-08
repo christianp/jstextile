@@ -28,6 +28,7 @@
 					var fn = textile('A footnote reference[1].\n\nfn1. The footnote.');
 					var re = /<p>A footnote reference<sup class="footnote"><a href="#fn[a-zA-Z0-9]+">1<\/a><\/sup>.<\/p>\n\n<p id="fn[a-zA_Z0-9]+" class="footnote"><sup>1<\/sup> The footnote.<\/p>/;
 					ok(re.test(fn),'Footnotes are represented by the fn1.,fn2.,... block modifiers '+fn);
+					equals(fn,re.source,'footnote');
 
 					equals( textile('bc. <script>\n// a Javascript example\nalert("Hello World");\n<\/script>'),'<pre><code>&#60;script&#62;\n// a Javascript example\nalert(&#34;Hello World&#34;);\n&#60;/script&#62;\n</code></pre>','XHTML significant characters such as < and > should be escaped within the code blocks.');
 					equals( textile('pre. Pre-formatted\ntext'),'<pre>Pre-formatted\ntext\n</pre>','Pre-formatted text.');
@@ -39,6 +40,19 @@
 					equals( textile('* Item A\n* Item B\n* Item C'),'<ul>\n<li>Item A</li>\n<li>Item B</li>\n<li>Item C</li>\n</ul>','Bulleted lists are represented by lines beginning with *');
 					equals( textile('*{color:red} Item one\n* Item two\n* Item three'),'<ul style="color:red;">\n<li>Item one</li>\n<li>Item two</li>\n<li>Item three</li>\n</ul>','Attributes applied to the first item should apply to the list itself.');
 					equals( textile('# Item one\n## Item one-A\n## Item one-B\n### Item one-B-a\n# Item two'),'<ol>\n<li>Item one\n<ol>\n<li>Item one-A</li>\n<li>Item one-B\n<ol>\n<li>Item one-B-a</li>\n</ol></li>\n</ol></li>\n<li>Item two</li>\n</ol>','Use multiple # or * symbols to create nested lists');
+				});
+
+				test("Tables",function() {
+					equals( textile('|a|simple|table|'),'<table>\n<tr>\n<td>a</td>\n<td>simple</td>\n<td>table</td>\n</tr>\n</table>','Pipe symbols separate cells.');
+					equals( textile('|_. a|_. table|_. heading|\n|a|table|row|'),'<table>\n<tr>\n<th>a</th>\n<th>table</th>\n<th>heading</th>\n</tr>\n<tr>\n<td>a</td>\n<td>table</td>\n<td>row</td>\n</tr>\n</table>','_. indicates table heading cells');
+					equals( textile('|a|{color:red}. styled|cell|'),'<table>\n<tr>\n<td>a</td>\n<td style="color:red;">styled</td>\n<td>cell</td>\n</tr>\n</table>','Cell attributes are placed within each cell.');
+					equals( textile('(rowclass). |a|classy|row|'),'<table>\n<tr class="rowclass">\n<td>a</td>\n<td>classy</td>\n<td>row</td>\n</tr>\n</table>','Row attributes are placed at the beginning of a row');
+					equals( textile('table(tableclass).\n|a|classy|table|\n|a|classy|table|'),'<table class="tableclass">\n<tr>\n<td>a</td>\n<td>classy</td>\n<td>table</td>\n</tr>\n<tr>\n<td>a</td>\n<td>classy</td>\n<td>table</td>\n</tr>\n</table>','Table attributes are specified by using the table. block modifier');
+					equals( textile('|^. top alignment|'),'<table>\n<tr>\n<td style="vertical-align:top;">top alignment</td>\n</tr>\n</table>','Vertically aligned cell');
+					equals( textile('|-. middle alignment|'),'<table>\n<tr>\n<td style="vertical-align:middle;">middle alignment</td>\n</tr>\n</table>','Middle aligned cell');
+					equals( textile('|~. bottom alignment|'),'<table>\n<tr>\n<td style="vertical-align:bottom;">bottom alignment</td>\n</tr>\n</table>','Bottom aligned cell');
+					equals( textile('|\2. spans two cols |\n| col 1 | col 2 |'),'<table>\n<tr>\n<td colspan="2">spans two cols </td>\n</tr>\n<tr>\n<td> col 1 </td>\n<td> col 2 </td>\n</tr>\n</table>','A backslash indicates column span.');
+					equals( textile('|/3. spans 3 rows | row a |\n| row b |\n| row c |'),'<table>\n<tr>\n<td rowspan="3">spans 3 rows </td>\n<td> row a </td>\n</tr>\n<tr>\n<td> row b </td>\n</tr>\n<tr>\n<td> row c </td>\n</tr>\n</table>','A forward slash indicates row span.');
 				});
 
 
