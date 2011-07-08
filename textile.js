@@ -50,15 +50,30 @@ var textile;
 			if(i==-1)
 				i = this.src.length;
 			var line = this.src.slice(0,i).trim();
-			this.src = this.src.slice(i+2);
+			this.src = this.src.slice(i+1);
 			return line;
 		},
 
 		convertSpan: function(span) {
 			span = span.replace('\n','<br />\n');
 			return span;
+		},
+
+		makeTag: function(tagName,attr)
+		{
+			var open = '<'+tagName;
+			for(var x in attr)
+			{
+				if(attr[x])
+					open+=' '+x+'="'+attr[x]+'"';
+			}
+			open+='>';
+			var close = '</'+tagName+'>';
+			return {open: open, close: close, name: tagName};
 		}
 	};
+
+	var para = TextileConverter.prototype.makeTag('p');
 
 
 	// array containing all block types.
@@ -159,11 +174,77 @@ var textile;
 
 	var re_anyBlock = new RegExp('^[a-zA-Z][a-zA-Z0-9]*'+re_attr.source+'?\\.+ ');
 
+	var re_list = new RegExp('^(#+|\\*+)'+re_attr.source+'? ');
+	var listItem = TextileConverter.prototype.makeTag('li');
+	var list = {
+		match: function() { return re_list.test(this.src); },
+		do: function() {
+			console.log('list');
+			var m;
+			var listType = '';
+			var tags = [], level=0, tag, listType='';
+			while(m = this.src.match(re_list))
+			{
+				var m = this.src.match(re_list);
+				var listType = m[1];
+				var tagName = listType[0]=='#' ? 'ol' : 'ul';
+				var llevel = listType.length;
+
+				while(llevel < level)
+				{
+					this.out += listItem.close+'\n'+tag.close;
+					var o = tags.pop() || {level: 0};
+					level = o.level;
+					tag = o.tag;
+				}
+				if(llevel == level && tag && tagName != tag.name)
+				{
+					this.out += tag.close+listItem.close+'\n';
+					var o = tags.pop() || {level: 0};
+					level = o.level;
+					tag = o.tag;
+				}
+				//definitely in a state where either current line is deeper nesting or same level as previous <li>
+				
+				if(level > 0)
+				{
+					if(llevel == level)
+						this.out += listItem.close;
+					this.out+='\n'
+				}
+				console.log(listType,llevel);
+
+				if(llevel > level || m[2])
+				{
+					console.log('up');
+					if(tag)
+						tags.push({level: level, tag: tag});
+					var attr = getAttributes(m[2]);
+					tag = this.makeTag(tagName,attr);
+					level = llevel;
+					this.out +=tag.open+'\n';
+				}
+				this.src = this.src.slice(m[0].length);
+				var line = this.getLine();
+				line = this.convertSpan(line);
+				console.log(' '+line);
+				this.out += listItem.open+line;
+			}
+			this.out += listItem.close+'\n';
+			while(tags.length)
+			{
+				this.out +=tag.close+listItem.close+'\n';
+				tag = tags.pop().tag;
+			}
+			this.out += tag.close+'\n\n';
+		}
+	};
+	blockTypes.push(list);
+
 	var re_blockquote = new RegExp('^bq'+re_attr.source+'?\\.(\\.)?(?::(\\S+))? ');
 	var blockquote = {
-		match: function() { return re_blockquote.test(this.src);},
+		match: function() { return re_blockquote.test(this.src); },
 		do: function() {
-			console.log("blockquote");
 			var m = this.src.match(re_blockquote);
 			var attr = getAttributes(m[1]);
 			var tag = this.makeTag('p',attr);
@@ -173,14 +254,12 @@ var textile;
 			var carryon = m[2]!=undefined;
 
 			this.src = this.src.slice(m[0].length);
-			console.log(this.src);
 			var block = this.getBlock();
 			block = this.convertSpan(block);
 			this.out += btag.open+'\n'+tag.open+block+tag.close;
 
 			if(carryon)
 			{
-				console.log("carryon");
 				while(this.src.length && !re_anyBlock.test(this.src))
 				{
 					var block = this.getBlock();
@@ -197,7 +276,6 @@ var textile;
 	var blockcode = {
 		match: function() { return re_blockcode.test(this.src);},
 		do: function() {
-			console.log("blockcode");
 			var m = this.src.match(re_blockcode);
 			var attr = getAttributes(m[1]);
 			var tag = this.makeTag('code',attr);
@@ -207,14 +285,12 @@ var textile;
 			var carryon = m[2]!=undefined;
 
 			this.src = this.src.slice(m[0].length);
-			console.log(this.src);
 			var block = this.getBlock();
 			block = this.escapeHTML(block);
 			this.out += btag.open+tag.open+block+'\n'+tag.close;
 
 			if(carryon)
 			{
-				console.log("carryon");
 				while(this.src.length && !re_anyBlock.test(this.src))
 				{
 					var block = this.getBlock();
@@ -231,7 +307,6 @@ var textile;
 	var preBlock = {
 		match: function() { return re_pre.test(this.src);},
 		do: function() {
-			console.log("pre");
 			var m = re_pre.exec(this.src);
 			this.src = this.src.slice(m[0].length);
 			var attr = getAttributes(m[1]);
@@ -243,7 +318,6 @@ var textile;
 
 			if(carryon)
 			{
-				console.log("carryon");
 				while(this.src.length && !re_anyBlock.test(this.src))
 				{
 					block += '\n\n' + this.getBlock();
@@ -256,6 +330,8 @@ var textile;
 	};
 	blockTypes.push(preBlock);
 
+	var re_notextile = new RegExp('^notextile'+re_attr.source+'?\.(\.)? ');
+
 	//normal block modifiers
 	var blocks = ['h1','h2','h3','h4','h5','h6','p','div'];
 	//add in any other normal block types here
@@ -264,7 +340,6 @@ var textile;
 		match: function() {return re_block.test(this.src);},
 
 		do: function() {
-			console.log("normal");
 			var m = this.src.match(re_block);
 			var tagName = m[1];
 			var attr = getAttributes(m[2]);
@@ -278,7 +353,6 @@ var textile;
 
 			if(carryon)
 			{
-				console.log("carryon");
 				while(this.src.length && !re_anyBlock.test(this.src))
 				{
 					var block = this.getBlock();
@@ -294,7 +368,6 @@ var textile;
 	var preHTMLBlock = {
 		match: function() { return re_preHTML.test(this.src);},
 		do: function() {
-			console.log("preHTML");
 			var m = re_preHTML.exec(this.src);
 			this.src = this.src.slice(m[0].length);
 
@@ -310,7 +383,6 @@ var textile;
 	var htmlBlock = {
 		match: function() { return re_html.test(this.src);},
 		do: function() {
-			console.log("html");
 			var html = re_html.exec(this.src)[0];
 			this.src = this.src.slice(html.length);
 			this.out += html;
@@ -322,27 +394,12 @@ var textile;
 	var plainBlock = {
 		match: function() { return true;},
 		do: function() {
-			console.log("plain");
 			var block = this.getBlock();
 			block = this.convertSpan(block);
 			this.out += para.open+block+para.close;
 		}
 	}
 	blockTypes.push(plainBlock);
-
-	TextileConverter.prototype.makeTag = function(tagName,attr)
-	{
-		var open = '<'+tagName;
-		for(var x in attr)
-		{
-			if(attr[x])
-				open+=' '+x+'="'+attr[x]+'"';
-		}
-		open+='>';
-		var close = '</'+tagName+'>';
-		return {open: open, close: close, name: tagName};
-	}
-	var para = TextileConverter.prototype.makeTag('p');
 
 	var htmlEscapes = [
 		'&', '&#38;',

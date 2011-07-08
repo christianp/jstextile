@@ -34,6 +34,13 @@
 					equals( textile('notextile. <script type="text/javascript">\ndocument.write("Hello World!");\n<\/script>\n<noscript>Your browser doesn\'t support Javascript<\/noscript>'),'<script type="text/javascript">\ndocument.write("Hello World!");\n<\/script>\n<noscript>Your browser doesn\'t support Javascript<\/noscript>','Raw XHTML characters should be passed through untouched.');
 				});
 
+				test("Lists",function() {
+					equals( textile('# Item one\n# Item two\n# Item three'),'<ol>\n<li>Item one</li>\n<li>Item two</li>\n<li>Item three</li>\n</ol>','Numeric lists are represented by lines beginning with #');
+					equals( textile('* Item A\n* Item B\n* Item C'),'<ul>\n<li>Item A</li>\n<li>Item B</li>\n<li>Item C</li>\n</ul>','Bulleted lists are represented by lines beginning with *');
+					equals( textile('*{color:red} Item one\n* Item two\n* Item three'),'<ul style="color:red;">\n<li>Item one</li>\n<li>Item two</li>\n<li>Item three</li>\n</ul>','Attributes applied to the first item should apply to the list itself.');
+					equals( textile('# Item one\n## Item one-A\n## Item one-B\n### Item one-B-a\n# Item two'),'<ol>\n<li>Item one\n<ol>\n<li>Item one-A</li>\n<li>Item one-B\n<ol>\n<li>Item one-B-a</li>\n</ol></li>\n</ol></li>\n<li>Item two</li>\n</ol>','Use multiple # or * symbols to create nested lists');
+				});
+
 
 				test("Using HTML in Textile",function() {
 					equals( textile("I am <b>very</b> serious.\n\n<pre>\n  I am <b>very</b> serious.\n</pre>"), "<p>I am <b>very</b> serious.</p>\n\n<pre>\n  I am &#60;b&#62;very&#60;/b&#62; serious.\n</pre>", "HTML should be retained.");
