@@ -51,7 +51,7 @@
 					equals( textile('|^. top alignment|'),'<table>\n<tr>\n<td style="vertical-align:top;">top alignment</td>\n</tr>\n</table>','Vertically aligned cell');
 					equals( textile('|-. middle alignment|'),'<table>\n<tr>\n<td style="vertical-align:middle;">middle alignment</td>\n</tr>\n</table>','Middle aligned cell');
 					equals( textile('|~. bottom alignment|'),'<table>\n<tr>\n<td style="vertical-align:bottom;">bottom alignment</td>\n</tr>\n</table>','Bottom aligned cell');
-					equals( textile('|\2. spans two cols |\n| col 1 | col 2 |'),'<table>\n<tr>\n<td colspan="2">spans two cols </td>\n</tr>\n<tr>\n<td> col 1 </td>\n<td> col 2 </td>\n</tr>\n</table>','A backslash indicates column span.');
+					equals( textile('|\\2. spans two cols |\n| col 1 | col 2 |'),'<table>\n<tr>\n<td colspan="2">spans two cols </td>\n</tr>\n<tr>\n<td> col 1 </td>\n<td> col 2 </td>\n</tr>\n</table>','A backslash indicates column span.');
 					equals( textile('|/3. spans 3 rows | row a |\n| row b |\n| row c |'),'<table>\n<tr>\n<td rowspan="3">spans 3 rows </td>\n<td> row a </td>\n</tr>\n<tr>\n<td> row b </td>\n</tr>\n<tr>\n<td> row c </td>\n</tr>\n</table>','A forward slash indicates row span.');
 				});
 

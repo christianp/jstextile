@@ -127,12 +127,12 @@ var textile;
 	//parse an attribute-modifier string into an attributes object
 	function getAttributes(attr)
 	{
-		if(!attr)
-			return {};
-
 		var opt = {
 			style: ''
 		};
+
+		if(!attr)
+			return opt;
 
 		var paddingLeft=0, paddingRight=0;
 
@@ -243,23 +243,79 @@ var textile;
 	};
 	blockTypes.push(list);
 
-	var re_table = new RegExp('^(table'+re_attr.source+'?\. *\\n)?(\\|.*\\|\\n?)+(?:\\n\\n|$)');
-	var re_tableRow = /^\|.*|(?:\n|$)/;
+	var re_table = new RegExp('^(table'+re_attr.source+'?\. *\\n)?(('+re_attr.source+'?\\. )?\\|.*\\|\\n?)+(?:\\n\\n|$)');
+	var re_tableRow = new RegExp('^(?:'+re_attr.source+'?\\. )?\\|.*\\|(?:\\n|$)');
+	var re_tableCell = new RegExp('^(_)?(\\^|-|~)?(?:\\\\(\\d+))?(?:/(\\d+))?'+re_attr.source+'?\\. ');
 	var table = {
 		match: function() { return re_table.test(this.src); },
 		do: function() {
 			var m = re_table.exec(this.src);
 			if(m[1])
 			{
-				var attr = m[2];
+				var attr = getAttributes(m[2]);
 				tableTag = this.makeTag('table',attr);
+				this.getLine();
 			}
 			else
 				tableTag = this.makeTag('table');
 			this.out += tableTag.open+'\n';
 
+			while(m = re_tableRow.exec(this.src))
+			{
+				var rowTag;
+				if(m[1])
+				{
+					attr = getAttributes(m[1]);
+					rowTag = this.makeTag('tr',attr);
+				}
+				else
+					rowTag = this.makeTag('tr');
+				this.out += rowTag.open+'\n';
+				var line = this.getLine();
+				console.log(line,this.src);
+				var cells = line.split('|');
+				var l = cells.length;
+				for(var i=1;i<l-1;i++)
+				{
+					var cell = cells[i];
+					if(m = re_tableCell.exec(cell))
+					{
+						console.log(m);
+						cell = cell.slice(m[0].length);
+						attr = getAttributes(m[5]);
+						var tagName = m[1] ? 'th' : 'td';
+						switch(m[2])
+						{
+						case '^':
+							attr['style']+='vertical-align:top;';
+							break;
+						case '-':
+							attr['style']+='vertical-align:middle;';
+							break;
+						case '~':
+							attr['style']+='vertical-align:bottom;';
+							break;
+						}
+						if(m[3])
+							attr['colspan'] = m[3];
+						if(m[4])
+							attr['rowspan'] = m[4];
+
+						var tag = this.makeTag(tagName,attr);
+					}
+					else
+					{
+						tag = this.makeTag('td');
+					}
+					cell = this.convertSpan(cell);
+					this.out += tag.open+cell+tag.close+'\n';
+				}
+				this.out+=rowTag.close+'\n';
+			}
+			this.out += tableTag.close;
 		}
 	};
+	blockTypes.push(table);
 
 	var re_footnote = new RegExp('^fn(\\d+)'+re_attr.source+'?\\.(\\.)? ');
 	var footnote = {
