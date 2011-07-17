@@ -9,8 +9,31 @@
 
 		<script>
 			$(document).ready(function(){
-				test("Writing in textile #1",function() {
+				test("Paragraph text",function() {
 					equals( textile("A single paragraph.\n\nFollowed by another."), '<p>A single paragraph.</p>\n\n<p>Followed by another.</p>', "Each line of text should be in a <p> tag");
+					equals( textile("A paragraph\nwith a line break."),'<p>A paragraph<br />\nwith a line break.</p>','Line breaks should be transformed into HTML line breaks.');
+					equals( textile("Here's some <b>bold</b> text."), "<p>Here&#8217;s some <b>bold</b> text.</p>","Simple HTML tags may be included in a paragraph.");
+					equals( textile(" No paragraph tags here."),'No paragraph tags here.',"A line beginning with a space will be left untouched, and not wrapped in <p> tags");
+				});
+				test("Smart quotes",function() {
+					equals( textile('"Proceed!" said he to the host.'),'<p>&#8220;Proceed!&#8221; said he to the host.</p>','Double quotes are turned into the correct curly quote marks.');
+					equals( textile("'Proceed!' said he to the host."),'<p>&#8216;Proceed!&#8217; said he to the host.</p>','Single quotes are turned into the correct curly quote marks.');
+					equals( textile('"\'I swear, captain,\' replied I."'),'<p>&#8220;&#8216;I swear, captain,&#8217; replied I.&#8221;</p>','Single and double quotation marks may be nested one inside the other.');
+					equals( textile("'\"I swear, captain,\" replied I.'"),'<p>&#8216;&#8220;I swear, captain,&#8221; replied I.&#8217;</p>');
+					equals( textile("Greengrocers' apostrophe's."),'<p>Greengrocers&#8217; apostrophe&#8217;s.</p>','Single quotation marks should be turned into apostrophe glyphs.');
+				});
+				test("Other punctuation",function() {
+					equals( textile("You know the Italian proverb -- Chi ha compagno ha padrone."),'<p>You know the Italian proverb &#8212; Chi ha compagno ha padrone.</p>','Double dashes become an em-dash.');
+					equals( textile('You know the Italian proverb--Chi ha compagno ha padrone.'),'<p>You know the Italian proverb&#8212;Chi ha compagno ha padrone.</p>');
+					equals( textile('You know the Italian proverb - Chi ha compagno ha padrone.'),'<p>You know the Italian proverb &#8211; Chi ha compagno ha padrone.</p>','Single dashes should be replaced with en-dashes.');
+					equals( textile('Meanwhile...'),'<p>Meanwhile&#8230;</p>','Three dots become an ellipsis.');
+					equals( textile('1 x 2 x 3 = 6'),'<p>1 &#215; 2 &#215; 3 = 6</p>','An x is replace with a times character when used between numbers.');
+					equals( textile('1x2x3 = 6'),'<p>1&#215;2&#215;3 = 6</p>');
+					equals( textile('Registered(r) Trademark(tm) Copyright (c).'),'<p>Registered&#174; Trademark&#8482; Copyright &#169;.</p>','Trademark, registered and copyright symbols are represented by their common text equivalents.');
+				});
+				test("Acronyms and uppercase",function() {
+					equals( textile('ABC(Always Be Closing)'),'<p><acronym title="Always Be Closing"><span class="caps">ABC</span></acronym></p>','Acronyms consist of three or more uppercase characters followed immediately by words in parentheses.');
+					equals( textile('IBM or HAL'),'<p><span class="caps">IBM</span> or <span class="caps">HAL</span></p>','Uppercase words of three or more characters are enclosed with a special span element.');
 				});
 
 				test("Blocks",function() {

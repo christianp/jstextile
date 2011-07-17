@@ -7,7 +7,7 @@ var textile;
 
 	function TextileConverter(src)
 	{
-		this.osrc = this.src = src.trim();
+		this.osrc = this.src = src;
 		this.out = '';
 		this.footnotes = [];
 	}
@@ -15,7 +15,7 @@ var textile;
 
 		convert: function() {
 			//console.log(".......");
-			this.src = this.src.trim();
+			this.src = this.src.replace(/^\n+/,'');
 			while( this.src.length )
 			{
 				//console.log(this.src);
@@ -31,7 +31,7 @@ var textile;
 					throw(new Error("Error - couldn't match any block type for:\n\n"+this.src));
 
 				this.out += '\n\n';
-				this.src = this.src.trim();
+				this.src = this.src.replace(/^\n+/,'');
 			}
 			return this.out.trim();
 		},
@@ -62,8 +62,27 @@ var textile;
 		},
 
 		convertSpan: function(span) {
-			span = span.replace('\n','<br />\n');
+			var nspan = '';
+			var m;
+			while(m = re_simpleTag.exec(span))
+			{
+				var bit = span.slice(0,m.index);
+				var tag = span.slice(m.index,re_simpleTag.lastIndex);
+				span = span.slice(re_simpleTag.lastIndex);
+				bit = this.convertGlyphs(bit);
+				nspan += bit+tag;
+			}
+			span = nspan + this.convertGlyphs(span);
+
 			return span;
+		},
+
+		convertGlyphs: function(txt) {
+			for(var i=0;i<glyphRules.length;i++)
+			{
+				txt = txt.replace(glyphRules[i][0],glyphRules[i][1]);
+			}
+			return txt;
 		},
 
 		makeTag: function(tagName,attr)
@@ -81,6 +100,27 @@ var textile;
 	};
 
 	var para = TextileConverter.prototype.makeTag('p');
+
+	var re_simpleTag = /<.*?>/g;
+	var re_punct = /[!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]/;
+	var glyphRules = [
+		[/\n(?! )/g,'<br />\n'],															//insert HTML newlines
+		[/(\w)'(\w)/g,'$1&#8217;$2'],													//apostrophes
+		[/(\s)'(\d+\w?)\b(?!')/g,'$1&#8217;$2'],											//abbreviated years ( '09 )
+		[new RegExp("(\\S)'(?=\\s|"+re_punct.source+"|<|$)",'g'),'$1&#8217;'],				//single quote closing
+		[/'/g,'&#8216;'],																//single quote opening
+		[new RegExp('(\\S)"(?=\\s|'+re_punct.source+'|<|$)','g'),'$1&#8221;'],				//double quote closing
+		[/"/g,'&#8220;'],																//double quote opening
+		[/\b([A-Z][A-Z0-9]{2,})\b(?:\(([^\)]*)\))/g,'<acronym title="$2"><span class="caps">$1</span></acronym>'],	//acronym with a definition
+		[/\b([A-Z][A-Z'\-]+[A-Z])(?=[\s.,\)>]|$)/g,'<span class="caps">$1</span>'],		//uppercase word
+		[/\b( ?)\.{3}/g,'$1&#8230;'],													//ellipsis
+		[/(\s?)--(\s?)/g,'$1&#8212;$2'],													//em dash
+		[/(\s?)-(?:\s|$)/g,' &#8211; '],													//en dash
+		[/(\d)( ?)x( ?)(?=\d)/g,'$1$2&#215;$3'],											//times sign
+		[/\b( ?)\(TM\)/gi,'$1&#8482;'],														//trademark sign
+		[/\b( ?)\(R\)/gi,'$1&#174;'],														//registered trademark sign
+		[/\b( ?)\(C\)/gi,'$1&#169;']															//copyright sign
+	];
 
 
 	// array containing all block types.
@@ -517,6 +557,15 @@ var textile;
 	};
 	blockTypes.push(htmlBlock);
 
+	var nowrapBlock = {
+		match: function() { return this.src.match(/^ /); },
+		do: function() {
+			var block = this.getBlock();
+			block = this.convertSpan(block);
+			this.out += block;
+		}
+	};
+	blockTypes.push(nowrapBlock);
 
 	var plainBlock = {
 		match: function() { return true;},
