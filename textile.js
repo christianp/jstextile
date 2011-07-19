@@ -367,7 +367,25 @@ var textile;
 		if(out.length)
 			out[out.length-1] += text;
 		return out;
+	});
 
+	var re_footnotePhrase = /(^|\S)\[(\d+)\](\S|$)/g;
+	phraseTypes.push(function(text) {
+		var out = [];
+		var m;
+		while(m=re_footnotePhrase.exec(text))
+		{
+			var pre = m[1] || '';
+			var post = m[3] || '';
+			var fn = this.footnoteID(m[2]);
+			var tag = this.makeTag('a',{href:'#'+fn});
+			var bit = [text.slice(0,m.index)+pre,'<sup class="footnote">'+tag.open+m[2]+tag.close+'</sup>',post];
+			out = this.joinPhraseBits(out,bit,out.length);
+			text = text.slice(re_footnotePhrase.lastIndex);
+		}
+		if(out.length)
+			out[out.length-1] += text;
+		return out;
 	});
 
 	//separate out HTML tags so they don't get escaped
@@ -546,13 +564,14 @@ var textile;
 			var n = parseInt(m[1]);
 			var attr = getAttributes(m[2]);
 			attr.id = this.footnoteID(n);
+			attr['class'] = 'footnote';
 			var tag = this.makeTag('p',attr);
 			var carryon = m[3]!=undefined;
 
 			this.src = this.src.slice(m[0].length);
 			var block = this.getBlock();
 			block = this.convertSpan(block);
-			this.out += tag.open+block+tag.close;
+			this.out += tag.open+'<sup>'+n+'</sup> '+block+tag.close;
 
 			if(carryon)
 			{

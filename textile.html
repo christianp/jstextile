@@ -77,7 +77,6 @@
 					var fn = textile('A footnote reference[1].\n\nfn1. The footnote.');
 					var re = /<p>A footnote reference<sup class="footnote"><a href="#fn[a-zA-Z0-9]+">1<\/a><\/sup>.<\/p>\n\n<p id="fn[a-zA_Z0-9]+" class="footnote"><sup>1<\/sup> The footnote.<\/p>/;
 					ok(re.test(fn),'Footnotes are represented by the fn1.,fn2.,... block modifiers '+fn);
-					equals(fn,re.source,'footnote');
 
 					equals( textile('bc. <script>\n// a Javascript example\nalert("Hello World");\n<\/script>'),'<pre><code>&#60;script&#62;\n// a Javascript example\nalert(&#34;Hello World&#34;);\n&#60;/script&#62;\n</code></pre>','XHTML significant characters such as < and > should be escaped within the code blocks.');
 					equals( textile('pre. Pre-formatted\ntext'),'<pre>Pre-formatted\ntext\n</pre>','Pre-formatted text.');
