@@ -36,6 +36,19 @@
 					equals( textile('IBM or HAL'),'<p><span class="caps">IBM</span> or <span class="caps">HAL</span></p>','Uppercase words of three or more characters are enclosed with a special span element.');
 				});
 
+				test("Phrase modifiers",function() {
+					equals( textile('The _underlying_ cause.'),'<p>The <em>underlying</em> cause.</p>','Emphasis is added with underscores.');
+					equals( textile('The *underlying* cause.'),'<p>The <strong>underlying</strong> cause.</p>','Strong text is indicated by asterisks.');
+					equals( textile('The __underlying__ cause.'),'<p>The <i>underlying</i> cause.</p>','Double underscores should give an italics tag.');
+					equals( textile('The **underlying** cause.'),'<p>The <b>underlying</b> cause.</p>','Double asterisks should give a bold tag.');
+					equals( textile('??The Count of Monte Cristo??, by Dumas.'),'<p><cite>The Count of Monte Cristo</cite>, by Dumas.</p>','Double question marks represent a citation.');
+					equals( textile('Scratch -that-, replace with +this+.'),'<p>Scratch <del>that</del>, replace with <ins>this</ins>.</p>','Inserted and deleted text is represented by plus and minus symbols.');
+					equals( textile('log ~2~ n'),'<p>log <sub>2</sub> n</p>','Subscript and superscript text is indicated by tilde and caret characters.');
+					equals( textile('2 ^x^'),'<p>2 <sup>x</sup></p>');
+					equals( textile('The %underlying% cause.'),'<p>The <span>underlying</span> cause.</p>','Percentage marks should enclose text with a span tag.');
+					equals( textile('About the @<hr />@ tag.'),'<p>About the <code>&#60;hr /&#62;</code> tag.</p>','at symbols should surround code with a code tag and escape HTML-significant characters.');
+				});
+
 				test("Blocks",function() {
 					equals( textile('h1. Heading 1'), '<h1>Heading 1</h1>');
 					equals( textile('h2. Heading 2'), '<h2>Heading 2</h2>');

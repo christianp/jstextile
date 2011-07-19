@@ -62,19 +62,49 @@ var textile;
 		},
 
 		convertSpan: function(span) {
-			var nspan = '';
-			var m;
-			while(m = re_simpleTag.exec(span))
-			{
-				var bit = span.slice(0,m.index);
-				var tag = span.slice(m.index,re_simpleTag.lastIndex);
-				span = span.slice(re_simpleTag.lastIndex);
-				bit = this.convertGlyphs(bit);
-				nspan += bit+tag;
-			}
-			span = nspan + this.convertGlyphs(span);
+			var nspan = [span];	//alternating bits that can be touched, and bits that should not change
 
-			return span;
+			//do phrase modifiers
+			for(var i=0;i<phraseTypes.length;i++)
+			{
+				for(var j=0;j<nspan.length;j+=2)
+				{
+					var res = phraseTypes[i].call(this,nspan[j]);
+					if(res.length)
+					{
+						nspan[j] = '';
+						nspan = this.joinPhraseBits(nspan,res,j+1);
+					}
+				}
+			}
+
+			//convert glyphs
+			for(var i=0;i<nspan.length;i+=2)
+			{
+				nspan[i] = this.convertGlyphs(nspan[i]);
+			}
+
+			//find HTML tags so they don't get touched
+			//span = nspan + this.convertGlyphs(span);
+
+			return nspan.join('');
+		},
+
+		joinPhraseBits: function(arr1,arr2,index)
+		{
+			if(!arr1.length)
+				return arr2;
+			if(index % 2)
+			{
+				arr1[index-1] += arr2[0];
+				arr2 = arr2.slice(1);
+			}
+			if(arr2.length % 2 && index<arr1.length &&  arr2.length>1)
+			{
+				arr1[index] += arr2[arr2.length-1];
+				arr2 = arr2.slice(0,-1);
+			}
+			return arr1.slice(0,index).concat(arr2,arr1.slice(index));
 		},
 
 		convertGlyphs: function(txt) {
@@ -121,18 +151,6 @@ var textile;
 		[/\b( ?)\(R\)/gi,'$1&#174;'],														//registered trademark sign
 		[/\b( ?)\(C\)/gi,'$1&#169;']															//copyright sign
 	];
-
-
-	// array containing all block types.
-	// Contains objects of the form
-	//	{
-	//		match: function()			//returns true if source begins with this kind of block
-	//		do: function()				//perform appropriate conversion on the block
-	//	}
-	// the functions are applied in the context of the TextileConverter object, so read in from this.src and output to this.out
-	// the 'do' function should remove the block it converted from this.src
-	// if you're adding another block type, add it to the start of this array
-	var blockTypes = [];
 
 	//matches attribute modifier strings
 	//use getAttributes to parse this into actual values
@@ -218,6 +236,115 @@ var textile;
 
 		return opt;
 	}
+
+
+	//array containing all the phrase modifiers
+	//Contains functions which each replace a particular phrase modifier with the appropriate HTML
+	//Functions are called with respect to the TextileConvertor object, so can use things like this.makeTag
+	var phraseTypes = [];
+
+	var shortPunct = '\\.,"\'?!;:';
+	function makeNormalPhraseType(start,tagName,protectContents)
+	{
+		var re = new RegExp('(?:^|\\{|\\[|(['+shortPunct+']|\\s))'+start+'(?:'+re_attr.source+' )?([^\\s'+start+']+|\\S[^'+start+'\\n]*[^\\s'+start+'\\n])'+start+'(?:$|[\\]}]|('+re_punct.source+'{1,2}|\\s))','g');
+		return function(text) {
+			var out = [];
+			var m;
+			while(m=re.exec(text))
+			{
+				var pre = m[1] || '';
+				var post = m[4] || '';
+				var attr = getAttributes(m[2]);
+				var tag = this.makeTag(tagName,attr);
+				var bit = [text.slice(0,m.index)+pre,post];
+				if(protectContents)
+				{
+					var content = this.escapeHTML(m[3]);
+					bit.splice(1,0,tag.open+content+tag.close);
+				}
+				else
+					bit.splice(1,0,tag.open,m[3],tag.close);
+				out = this.joinPhraseBits(out,bit,out.length);
+				text = text.slice(re.lastIndex);
+			};
+			if(out.length)
+				out[out.length-1]+=text;
+			return out;
+		};
+	}
+
+	phraseTypes.push(makeNormalPhraseType('\\*\\*','b'));
+	phraseTypes.push(makeNormalPhraseType('__','i'));
+	phraseTypes.push(makeNormalPhraseType('\\*','strong'));
+	phraseTypes.push(makeNormalPhraseType('_','em'));
+	phraseTypes.push(makeNormalPhraseType('\\?\\?','cite'));
+	phraseTypes.push(makeNormalPhraseType('\\-','del'));
+	phraseTypes.push(makeNormalPhraseType('\\+','ins'));
+	phraseTypes.push(makeNormalPhraseType('\\%','span'));
+	phraseTypes.push(makeNormalPhraseType('~','sub'));
+	phraseTypes.push(makeNormalPhraseType('\\^','sup'));
+
+	var re_codePhrase = /(?:^|([\s(>])|\[|\{)@(.*?)@(?:([\s)])|$|\]|\})?/gm;
+	phraseTypes.push(function(text) {
+		var out = [];
+		var m;
+		while(m=re_codePhrase.exec(text))
+		{
+			var pre = m[1] || '';
+			var post = m[3] || '';
+			var bit = [text.slice(0,m.index)+pre,'<code>'+this.escapeHTML(m[2])+'</code>',post];
+			out = this.joinPhraseBits(out,bit,out.length);
+			text = text.slice(re_codePhrase.lastIndex);
+		}
+		if(out.length)
+			out[out.length-1] += text;
+		return out;
+	});
+
+	var re_noTextilePhrase = /(?:^|([\s(>])|\[\{)==(.*?)==(?:([\s)])|$|\]\})?/gm;
+	phraseTypes.push(function(text) {
+		var out = [];
+		var m;
+		while(m=re_noTextilePhrase.exec(text))
+		{
+			var pre = m[1] || '';
+			var post = m[3] || '';
+			var bit = [text.slice(0,m.index)+pre,m[2],post];
+			out = this.joinPhraseBits(out,bit,out.length);
+			text = text.slice(re_noTextilePhrase.lastIndex);
+		}
+		if(out.length)
+			out[out.length-1] += text;
+		return out;
+	});
+
+	phraseTypes.push(function(span) {
+		var m;
+		var nspan = [];
+		while(m = re_simpleTag.exec(span))
+		{
+			var bit = span.slice(0,m.index);
+			var tag = span.slice(m.index,re_simpleTag.lastIndex);
+			span = span.slice(re_simpleTag.lastIndex);
+			bit = this.convertGlyphs(bit);
+			nspan = this.joinPhraseBits(nspan,[bit,tag],nspan.length+1)
+		}
+		if(nspan.length)
+			nspan.push(span);
+		return nspan;
+	});
+
+	// array containing all block types.
+	// Contains objects of the form
+	//	{
+	//		match: function()			//returns true if source begins with this kind of block
+	//		do: function()				//perform appropriate conversion on the block
+	//	}
+	// the functions are applied in the context of the TextileConverter object, so read in from this.src and output to this.out
+	// the 'do' function should remove the block it converted from this.src
+	// if you're adding another block type, add it to the start of this array
+	var blockTypes = [];
+
 
 	var re_anyBlock = new RegExp('^[a-zA-Z][a-zA-Z0-9]*'+re_attr.source+'?\\.+ ');
 
@@ -577,6 +704,7 @@ var textile;
 	}
 	blockTypes.push(plainBlock);
 
+	//HTML characters should be escaped
 	var htmlEscapes = [
 		'&', '&#38;',
 		'<', '&#60;',
