@@ -1,5 +1,5 @@
 var textile;
-//(function() {
+(function() {
 	textile = function(src) {
 		tc = new TextileConverter(src);
 		return tc.convert();
@@ -94,9 +94,10 @@ var textile;
 		{
 			if(!arr1.length)
 				return arr2;
+			index = Math.min(index,arr1.length)
 			if(index % 2)
 			{
-				arr1[index-1] += arr2[0];
+				arr1[index-1] = arr2[0];
 				arr2 = arr2.slice(1);
 			}
 			if(arr2.length % 2 && index<arr1.length &&  arr2.length>1)
@@ -214,9 +215,13 @@ var textile;
 		}
 		if(m=attr.match(re_attrClassId))
 		{
-			paddingLeft -= m.length;
-			paddingRight -= m.length;
+			var n = m.length;
 			m=re_attrClassIdSingle.exec(m[0]);
+			if(m[1] || m[2])
+			{
+				paddingLeft -= m.length;
+				paddingRight -= m.length;
+			}
 			if(m[1])
 				opt['class'] = m[1];
 			if(m[2])
@@ -228,7 +233,7 @@ var textile;
 		}
 		if(paddingLeft>0)
 			opt['style'] += 'padding-left:'+paddingLeft+'em;';
-		if(opt['padding-right']>0)
+		if(paddingRight>0)
 			opt['style'] += 'padding-right:'+paddingRight+'em;';
 		if(m=re_attrAlign.exec(attr))
 		{
@@ -242,7 +247,7 @@ var textile;
 	//array containing all the phrase modifiers
 	//Contains functions which each replace a particular phrase modifier with the appropriate HTML
 	//Functions are called with respect to the TextileConvertor object, so can use things like this.makeTag
-	var phraseTypes = [];
+	var phraseTypes = textile.phraseTypes = [];
 
 	var shortPunct = '\\.,"\'?!;:';
 	function makeNormalPhraseType(start,tagName,protectContents)
@@ -319,7 +324,7 @@ var textile;
 		return out;
 	});
 
-	var re_link = /(?:^|([\s(>])|\[|\{)"(.*?)(?:\((.*)\))?":(\S+)(?:$|([\s)])|\]|\})/g;
+	var re_link = /(?:^|([\s(>])|\[|\{)"(.*?)(?:\((.*)\))?":(\S+?)(?:$|([\s)])|\]|\})/g;
 	phraseTypes.push(function(text) {
 		var out = [];
 		var m;
@@ -332,7 +337,7 @@ var textile;
 				title: m[3]
 			};
 			var tag = this.makeTag('a',attr);
-			var bit = [pre,tag.open,m[2],tag.close,post];
+			var bit = [text.slice(0,m.index)+pre,tag.open,m[2],tag.close,post];
 			out = this.joinPhraseBits(out,bit,out.length);
 			text = text.slice(re_link.lastIndex);
 		}
@@ -388,6 +393,40 @@ var textile;
 		return out;
 	});
 
+	var re_codeHTMLPhrase = /<code>((?:.|\n)*?)<\/code>/gm;
+	phraseTypes.push(function(span) {
+		var m;
+		var nspan = [];
+		while(m=re_codeHTMLPhrase.exec(span))
+		{
+			var bit = span.slice(0,m.index);
+			var tag = '<code>'+this.escapeHTML(m[1])+'</code>';
+			span = span.slice(re_codeHTMLPhrase.lastIndex);
+			bit = this.convertGlyphs(bit);
+			nspan = this.joinPhraseBits(nspan,[bit,tag],nspan.length+1)
+		}
+		if(nspan.length)
+			nspan.push(span);
+		return nspan;
+	});
+
+	var re_notextileHTMLPhrase = /<notextile>((?:.|\n)*?)<\/notextile>/gm;
+	phraseTypes.push(function(span) {
+		var m;
+		var nspan = [];
+		while(m=re_notextileHTMLPhrase.exec(span))
+		{
+			var bit = span.slice(0,m.index);
+			var tag = m[1];
+			span = span.slice(re_notextileHTMLPhrase.lastIndex);
+			bit = this.convertGlyphs(bit);
+			nspan = this.joinPhraseBits(nspan,[bit,tag],nspan.length+1)
+		}
+		if(nspan.length)
+			nspan.push(span);
+		return nspan;
+	});
+
 	//separate out HTML tags so they don't get escaped
 	//this should be the last phrase type
 	phraseTypes.push(function(span) {
@@ -415,7 +454,7 @@ var textile;
 	// the functions are applied in the context of the TextileConverter object, so read in from this.src and output to this.out
 	// the 'do' function should remove the block it converted from this.src
 	// if you're adding another block type, add it to the start of this array
-	var blockTypes = [];
+	var blockTypes = textile.blockTypes = [];
 
 
 	var re_anyBlock = new RegExp('^[a-zA-Z][a-zA-Z0-9]*'+re_attr.source+'?\\.+ ');
@@ -511,7 +550,6 @@ var textile;
 					rowTag = this.makeTag('tr');
 				this.out += rowTag.open+'\n';
 				var line = this.getLine();
-				console.log(line,this.src);
 				var cells = line.split('|');
 				var l = cells.length;
 				for(var i=1;i<l-1;i++)
@@ -519,7 +557,6 @@ var textile;
 					var cell = cells[i];
 					if(m = re_tableCell.exec(cell))
 					{
-						console.log(m);
 						cell = cell.slice(m[0].length);
 						attr = getAttributes(m[5]);
 						var tagName = m[1] ? 'th' : 'td';
@@ -747,8 +784,13 @@ var textile;
 
 
 	var re_html = /^<(\w+)((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>(.|\n(?!\n))*<\/\1>(\n\n|$)/;
+	var inlineTags = 'a abbr acronym b bdo big br cite code dfn em i img input kbd label q samp select small span strong sub sup textarea tt var notextile'
 	var htmlBlock = {
-		match: function() { return re_html.test(this.src);},
+		match: function() { 
+			var m = this.src.match(re_html); 
+			if(m)
+				return inlineTags.search(m[1])==-1;
+		},
 		do: function() {
 			var html = re_html.exec(this.src)[0];
 			this.src = this.src.slice(html.length);
@@ -798,4 +840,4 @@ var textile;
 		return html;
 	}
 
-//})();
+})();

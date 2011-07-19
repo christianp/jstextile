@@ -105,11 +105,27 @@
 				test("HTML",function() {
 					equals( textile('<b>bold</b> and <i>italic</i>, the hard way.'),'<p><b>bold</b> and <i>italic</i>, the hard way.</p>','Span tags that enclose part of a block should be left intact.');
 					equals( textile('<div class="mydiv">My div</div>'),'<div class="mydiv">My div</div>','Paragraphs that consist entirely of block tags should not be enclosed in <p> tags.');
-	//				equals( textile('
-	//				equals( textile('
-	//				equals( textile('
-	//				equals( textile('
-	//				equals( textile('
+					equals( textile('<img src="/img.gif" />'),'<p><img src="/img.gif" /></p>','Paragraphs only partly enclosed in block tags, or only inline tags, should be enclosed in <p> tags.');
+					equals( textile('<span class="myspan">I\'ll make my own way.</span>'),'<p><span class="myspan">I&#8217;ll make my own way.</span></p>');
+					equals( textile('<div>inside</div> and outside.'),'<p><div>inside</div> and outside.</p>');
+					equals( textile(' <div>\n <span>My div</span>\n </div>'),'<div>\n <span>My div</span>\n </div>','To prevent Textile from enclosing HTML blocks in para tags, use a space at the beginning of each line.');
+					equals( textile('notextile.. <div>\n\n<span>My div</span>\n\n</div>'),'<div>\n\n<span>My div</span>\n\n</div>','or use a notextile.. block');
+					equals( textile('<pre>\nA HTML <b>example</b>.\n</pre>'),'<pre>\nA HTML &#60;b&#62;example&#60;/b&#62;.\n</pre>','The contents of explicit pre and code tags are escaped for display.');
+					equals( textile('<code>\nAnother HTML <b>example</b>.\n</code>'),'<p><code>\nAnother HTML &#60;b&#62;example&#60;/b&#62;.\n</code></p>');
+					equals( textile('<notextile>\np. Leave me alone\n</notextile>'),'<p>\np. Leave me alone\n</p>');
+				});
+
+				test("Alignment",function() {
+					equals( textile('p<. Left-aligned paragraph.'),'<p style="text-align:left;">Left-aligned paragraph.</p>','Left alignment is specified with a less-than symbol.');
+					equals( textile('h3>. Right-aligned heading.'),'<h3 style="text-align:right;">Right-aligned heading.</h3>','Right alignment is specified with a greater-than symbol.');
+					equals( textile('p<>. Justified paragraph.'),'<p style="text-align:justify;">Justified paragraph.</p>','Use both symbpols for justified text.');
+					equals( textile('h3=. Centered heading.'),'<h3 style="text-align:center;">Centered heading.</h3>','An equals symbol represents centred text.');
+				});
+
+				test("Padding",function() {
+					equals( textile('p(. Left pad 1em.'),'<p style="padding-left:1em;">Left pad 1em.</p>','Use parentheses to add padding, in multiples of 1em.');
+					equals( textile('p)). Right pad 2em.'),'<p style="padding-right:2em;">Right pad 2em.</p>');
+					equals( textile('p(). Left and right pad 1em.'),'<p style="padding-left:1em;padding-right:1em;">Left and right pad 1em.</p>');
 				});
 
 				test("Lists",function() {
@@ -132,17 +148,12 @@
 					equals( textile('|/3. spans 3 rows | row a |\n| row b |\n| row c |'),'<table>\n<tr>\n<td rowspan="3">spans 3 rows </td>\n<td> row a </td>\n</tr>\n<tr>\n<td> row b </td>\n</tr>\n<tr>\n<td> row c </td>\n</tr>\n</table>','A forward slash indicates row span.');
 				});
 
-
-				test("Using HTML in Textile",function() {
-					equals( textile("I am <b>very</b> serious.\n\n<pre>\n  I am <b>very</b> serious.\n</pre>"), "<p>I am <b>very</b> serious.</p>\n\n<pre>\n  I am &#60;b&#62;very&#60;/b&#62; serious.\n</pre>", "HTML should be retained.");
-				});
-
-				test("Extended blocks", function() {
-					equals( textile("bq.. A quote.\n\nThe quote continued.\n\np. Back to paragraph text."),'<blockquote>\n<p>A quote.</p>\n<p>The quote continued.</p>\n</blockquote>\n\n<p>Back to paragraph text.</p>',"First two blocks should be in blockquote, third should be a paragraph.");
-					equals( textile("A PHP code example.\n\nbc.. <?php\nfunction hello() {\n// display a hello message\n\nprint \"Hello, World\";\n}\n?>\n\np. Following paragraph."),'<p>A <span class="caps">PHP</span> code example.</p>\n\n<pre><code>&#60;?php\nfunction hello() {\n// display a hello message\n</code>\n<code>print &#34;Hello, World&#34;;\n}\n?&#62;\n</code></pre>\n\n<p>Following paragraph.</p>','Long example of code containing blank lines.');
-					equals( textile('p(myclass).. A classy paragraph.\n\nAnother classy paragraph.\n\np. Not so classy.'),'<p class="myclass">A classy paragraph.</p>\n<p class="myclass">Another classy paragraph.</p>\n\n<p>Not so classy.</p>',"Any block attributes on an extended block should be included on each following block.");
-					equals( textile('bq(myclass).. Quote paragraph 1.\n\nParagraph 2.'),'<blockquote class="myclass">\n<p class="myclass">Quote paragraph 1.</p>\n<p class="myclass">Paragraph 2.</p>\n</blockquote>','Attributes on bq.. and bc.. extended blocks should be included on both the inner and outer blocks.');
-					equals( textile('bc(myclass).. Code block 1.\n\nCode block 2.'),'<pre class="myclass"><code class="myclass">Code block 1.\n</code>\n<code class="myclass">Code block 2.\n</code></pre>','Attributes on bq.. and bc.. extended blocks should be included on both the inner and outer blocks.');
+				test("Miscellaneous",function() {
+					equals( textile('this*won\'t*work'),'<p>this*won&#8217;t*work</p>','Modifiers normally require surrounding whitespace.');
+					equals( textile('this[*will*]work'),'<p>this<strong>will</strong>work</p>','To use modifiers without whitespace, surround width square brackets.');
+					equals( textile('1[^st^}, 2[^nd^], 3[^rd^].'),'<p>1<sup>st</sup>, 2<sup>nd</sup>, 3<sup>rd</sup>.</p>','This is particularly useful with superscript and subscript.');
+					equals( textile('2 log[~n~]'),'<p>2 log<sub>n</sub></p>');
+					equals( textile('A close[!/img.gif!]image.\nA tight["text":http://example.com/]link.'),'<p>A close<img src="/img.gif" />image.<br />\nA tight<a href="http://example.com/">text</a>link.</p>','It can also be used on links and images.');
 				});
 			});
 		</script>
