@@ -83,6 +83,35 @@
 					equals( textile('notextile. <script type="text/javascript">\ndocument.write("Hello World!");\n<\/script>\n<noscript>Your browser doesn\'t support Javascript<\/noscript>'),'<script type="text/javascript">\ndocument.write("Hello World!");\n<\/script>\n<noscript>Your browser doesn\'t support Javascript<\/noscript>','Raw XHTML characters should be passed through untouched.');
 				});
 
+				test("Attributes",function() {
+					equals( textile('p(myclass). My classy paragraph.'),'<p class="myclass">My classy paragraph.</p>','Classes and IDs are specified with parentheses.');
+					equals( textile('p(#myid). My ID paragraph.'),'<p id="myid">My ID paragraph.</p>');
+					equals( textile('p{color:red}. Red rum.'),'<p style="color:red;">Red rum.</p>','CSS styles are specified with braces.');
+					equals( textile('p[fr-fr]. En français.'),'<p lang="fr-fr">En français.</p>','Languages are specified with square brackets.');
+					equals( textile('A *(myclass)classy* phrase.'),'<p>A <strong class="myclass">classy</strong> phrase.</p>','The same syntax may be applied to phrase modifiers');
+					equals( textile('The %{color:blue}blue% room.'),'<p>The <span style="color:blue;">blue</span> room.</p>');
+					equals( textile('p(myclass#myid3){color:green}[de-de]. A complex paragraph.'),'<p style="color:green;" class="myclass" id="myid3" lang="de-de">A complex paragraph.</p>','Block and phrase attributes may be combined.');
+					equals( textile('A ??(myclass#myid4){color:green}[de-de]complex?? phrase.'),'<p>A <cite style="color:green;" class="myclass" id="myid4" lang="de-de">complex</cite> phrase.</p>');
+				});
+
+				test("Extended blocks",function() {
+					equals( textile('bq.. A quote.\n\nThe quote continued.\n\np. Back to paragraph text.'),'<blockquote>\n<p>A quote.</p>\n<p>The quote continued.</p>\n</blockquote>\n\n<p>Back to paragraph text.</p>','Use two dots to make a block continue until the next block modifier.');
+					equals( textile('A PHP code example.\n\nbc.. <?php\nfunction hello() {\n// display a hello message\n\nprint "Hello, World";\n}\n?>\n\np. Following paragraph.'),'<p>A <span class="caps">PHP</span> code example.</p>\n\n<pre><code>&#60;?php\nfunction hello() {\n// display a hello message\n</code>\n<code>print &#34;Hello, World&#34;;\n}\n?&#62;\n</code></pre>\n\n<p>Following paragraph.</p>','Extended blocks are useful for long examples of code.');
+					equals( textile('p(myclass).. A classy paragraph.\n\nAnother classy paragraph.\n\np. Not so classy.'),'<p class="myclass">A classy paragraph.</p>\n<p class="myclass">Another classy paragraph.</p>\n\n<p>Not so classy.</p>','Block attributes on an extended block should be included on each following block.');
+					equals( textile('bq(myclass).. Quote paragraph 1.\n\nParagraph 2.'),'<blockquote class="myclass">\n<p class="myclass">Quote paragraph 1.</p>\n<p class="myclass">Paragraph 2.</p>\n</blockquote>','Attributes on bq and bc extended blocks should be included on both the inner and outer blocks.');
+					equals( textile('bc(myclass).. Code block 1.\n\nCode block 2.'),'<pre class="myclass"><code class="myclass">Code block 1.\n</code>\n<code class="myclass">Code block 2.\n</code></pre>');
+				});
+
+				test("HTML",function() {
+					equals( textile('<b>bold</b> and <i>italic</i>, the hard way.'),'<p><b>bold</b> and <i>italic</i>, the hard way.</p>','Span tags that enclose part of a block should be left intact.');
+					equals( textile('<div class="mydiv">My div</div>'),'<div class="mydiv">My div</div>','Paragraphs that consist entirely of block tags should not be enclosed in <p> tags.');
+	//				equals( textile('
+	//				equals( textile('
+	//				equals( textile('
+	//				equals( textile('
+	//				equals( textile('
+				});
+
 				test("Lists",function() {
 					equals( textile('# Item one\n# Item two\n# Item three'),'<ol>\n<li>Item one</li>\n<li>Item two</li>\n<li>Item three</li>\n</ol>','Numeric lists are represented by lines beginning with #');
 					equals( textile('* Item A\n* Item B\n* Item C'),'<ul>\n<li>Item A</li>\n<li>Item B</li>\n<li>Item C</li>\n</ul>','Bulleted lists are represented by lines beginning with *');

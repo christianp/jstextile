@@ -204,10 +204,6 @@ var textile;
 				style+=';'
 			opt['style'] = style;
 		}
-		if(m=re_attrLanguage.exec(attr))
-		{
-			opt['language'] = m[1];
-		}
 		if(m=attr.match(re_attrLeftPadding))
 		{
 			paddingLeft += m.length;
@@ -225,6 +221,10 @@ var textile;
 				opt['class'] = m[1];
 			if(m[2])
 				opt['id'] = m[2];
+		}
+		if(m=re_attrLanguage.exec(attr))
+		{
+			opt['lang'] = m[1];
 		}
 		if(paddingLeft>0)
 			opt['style'] += 'padding-left:'+paddingLeft+'em;';
@@ -247,7 +247,7 @@ var textile;
 	var shortPunct = '\\.,"\'?!;:';
 	function makeNormalPhraseType(start,tagName,protectContents)
 	{
-		var re = new RegExp('(?:^|\\{|\\[|(['+shortPunct+']|\\s))'+start+'(?:'+re_attr.source+' )?([^\\s'+start+']+|\\S[^'+start+'\\n]*[^\\s'+start+'\\n])'+start+'(?:$|[\\]}]|('+re_punct.source+'{1,2}|\\s))','g');
+		var re = new RegExp('(?:^|\\{|\\[|(['+shortPunct+']|\\s))'+start+'(?:'+re_attr.source+' ?)?([^\\s'+start+']+|\\S[^'+start+'\\n]*[^\\s'+start+'\\n])'+start+'(?:$|[\\]}]|('+re_punct.source+'{1,2}|\\s))','g');
 		return function(text) {
 			var out = [];
 			var m;
