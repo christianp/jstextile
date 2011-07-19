@@ -324,7 +324,7 @@ var textile;
 		return out;
 	});
 
-	var re_link = /(?:^|([\s(>])|\[|\{)"(.*?)(?:\((.*)\))?":(\S+?)(?:$|([\s)])|\]|\})/g;
+	var re_link = /(?:^|([\s(>])|\[|\{)"(.*?)(?:\((.*)\))?":(\S+?)(?:$|([\s),!?;]|\.(?:$|\s))|\]|\})/g;
 	phraseTypes.push(function(text) {
 		var out = [];
 		var m;
