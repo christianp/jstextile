@@ -123,9 +123,10 @@ var textile;
 				if(attr[x])
 					open+=' '+x+'="'+attr[x]+'"';
 			}
+			var single = open+' />';
 			open+='>';
 			var close = '</'+tagName+'>';
-			return {open: open, close: close, name: tagName};
+			return {single: single, open: open, close: close, name: tagName};
 		}
 	};
 
@@ -301,7 +302,7 @@ var textile;
 		return out;
 	});
 
-	var re_noTextilePhrase = /(?:^|([\s(>])|\[\{)==(.*?)==(?:([\s)])|$|\]\})?/gm;
+	var re_noTextilePhrase = /(?:^|([\s(>])|\[|\{)==(.*?)==(?:([\s)])|$|\]\})?/gm;
 	phraseTypes.push(function(text) {
 		var out = [];
 		var m;
@@ -318,6 +319,59 @@ var textile;
 		return out;
 	});
 
+	var re_link = /(?:^|([\s(>])|\[|\{)"(.*?)(?:\((.*)\))?":(\S+)(?:$|([\s)])|\]|\})/g;
+	phraseTypes.push(function(text) {
+		var out = [];
+		var m;
+		while(m=re_link.exec(text))
+		{
+			var pre = m[1] || '';
+			var post = m[5] || '';
+			var attr = {
+				href: m[4],
+				title: m[3]
+			};
+			var tag = this.makeTag('a',attr);
+			var bit = [pre,tag.open,m[2],tag.close,post];
+			out = this.joinPhraseBits(out,bit,out.length);
+			text = text.slice(re_link.lastIndex);
+		}
+		if(out.length)
+			out[out.length-1] += text;
+		return out;
+	});
+
+	var re_image = /(?:^|([\s(>])|\[|\{)!(.*?)(?:\((.*)\))?!(?::(\S+))?(?:$|([\s)])|\]|\})/g;
+	phraseTypes.push(function(text) {
+		var out = [];
+		var m;
+		while(m=re_image.exec(text))
+		{
+			var pre = m[1] || '';
+			var post = m[5] || '';
+			var attr = {
+				src: m[2],
+				title: m[3],
+				alt: m[3]
+			};
+			var img = this.makeTag('img',attr).single;
+			if(m[4])
+			{
+				var tag = this.makeTag('a',{href:m[4]});
+				img = tag.open+img+tag.close;
+			}
+			var bit = [text.slice(0,m.index)+pre,img,post];
+			out = this.joinPhraseBits(out,bit,out.length);
+			text = text.slice(re_image.lastIndex);
+		}
+		if(out.length)
+			out[out.length-1] += text;
+		return out;
+
+	});
+
+	//separate out HTML tags so they don't get escaped
+	//this should be the last phrase type
 	phraseTypes.push(function(span) {
 		var m;
 		var nspan = [];

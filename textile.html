@@ -49,6 +49,19 @@
 					equals( textile('About the @<hr />@ tag.'),'<p>About the <code>&#60;hr /&#62;</code> tag.</p>','at symbols should surround code with a code tag and escape HTML-significant characters.');
 				});
 
+				test("Links",function() {
+					equals( textile('"link text":http://example.com/'),'<p><a href="http://example.com/">link text</a></p>','Links are represented by double quotes and a colon.');
+					equals( textile('"link text":/example'),'<p><a href="/example">link text</a></p>','The host name may be omitted for local link.');
+					equals( textile('"link text(with title)":http://example.com/'),'<p><a href="http://example.com/" title="with title">link text</a></p>','A title may be placed in parentheses');
+				});
+
+				test("Images",function() {
+					equals( textile('!/img.gif!'), '<p><img src="/img.gif" /></p>','Use exclamation marks to insert an image tag.');
+					equals( textile('!http://example.com/img.gif!'),'<p><img src="http://example.com/img.gif" /></p>');
+					equals( textile('!/img.gif(alt text)!'),'<p><img src="/img.gif" title="alt text" alt="alt text" /></p>','Use parentheses to include alt text.');
+					equals( textile('!/img.gif!:http://example.com/'),'<p><a href="http://example.com/"><img src="/img.gif" /></a></p>','Images may be combined with links by using an image in place of the link text.');
+				});
+
 				test("Blocks",function() {
 					equals( textile('h1. Heading 1'), '<h1>Heading 1</h1>');
 					equals( textile('h2. Heading 2'), '<h2>Heading 2</h2>');
@@ -59,7 +72,7 @@
 					equals( textile('p. A paragraph.\nContinued.\n\nAlso a paragraph.'),'<p>A paragraph.<br />\nContinued.</p>\n\n<p>Also a paragraph.</p>','Any paragraph without a block modifier should automatically be enclosed with p tags.');
 					
 					equals( textile("bq. A quotation.\nContinued.\n\nRegular paragraph."), "<blockquote>\n<p>A quotation.<br />\nContinued.</p>\n</blockquote>\n\n<p>Regular paragraph.</p>","Should put bq part inside a blockquote tag, and a p tag");
-					equals( textile("bq.:http://checkmyworking.com A cited quotation."), '<blockquote cite="http://checkmyworking.com">\n<p>A cited quotation.</p>\n</blockquote>', "Should add cite attribute to blockquote");
+					equals( textile("bq.:http://example.com A cited quotation."), '<blockquote cite="http://example.com">\n<p>A cited quotation.</p>\n</blockquote>', "Should add cite attribute to blockquote");
 
 					var fn = textile('A footnote reference[1].\n\nfn1. The footnote.');
 					var re = /<p>A footnote reference<sup class="footnote"><a href="#fn[a-zA-Z0-9]+">1<\/a><\/sup>.<\/p>\n\n<p id="fn[a-zA_Z0-9]+" class="footnote"><sup>1<\/sup> The footnote.<\/p>/;
