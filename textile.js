@@ -216,16 +216,20 @@ var textile;
 		if(m=attr.match(re_attrClassId))
 		{
 			var n = m.length;
-			m=re_attrClassIdSingle.exec(m[0]);
-			if(m[1] || m[2])
+			for(j=0;j<n && m[j].length==2;j++){}
+			if(j<n)
 			{
-				paddingLeft -= n;
-				paddingRight -= n;
+				m=re_attrClassIdSingle.exec(m[j]);
+				if(m[1] || m[2])
+				{
+					paddingLeft -= (n-j);
+					paddingRight -= (n-j);
+				}
+				if(m[1])
+					opt['class'] = m[1];
+				if(m[2])
+					opt['id'] = m[2];
 			}
-			if(m[1])
-				opt['class'] = m[1];
-			if(m[2])
-				opt['id'] = m[2];
 		}
 		if(m=re_attrLanguage.exec(attr))
 		{
