@@ -149,9 +149,9 @@ var textile;
 		[/(\s?)--(\s?)/g,'$1&#8212;$2'],													//em dash
 		[/(\s?)-(?:\s|$)/g,' &#8211; '],													//en dash
 		[/(\d)( ?)x( ?)(?=\d)/g,'$1$2&#215;$3'],											//times sign
-		[/\b( ?)\(TM\)/gi,'$1&#8482;'],														//trademark sign
-		[/\b( ?)\(R\)/gi,'$1&#174;'],														//registered trademark sign
-		[/\b( ?)\(C\)/gi,'$1&#169;']															//copyright sign
+		[/(?:^|\b)( ?)\(TM\)/gi,'$1&#8482;'],														//trademark sign
+		[/(?:^|\b)( ?)\(R\)/gi,'$1&#174;'],														//registered trademark sign
+		[/(?:^|\b)( ?)\(C\)/gi,'$1&#169;']															//copyright sign
 	];
 
 	//matches attribute modifier strings
