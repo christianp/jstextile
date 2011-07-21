@@ -219,8 +219,8 @@ var textile;
 			m=re_attrClassIdSingle.exec(m[0]);
 			if(m[1] || m[2])
 			{
-				paddingLeft -= m.length;
-				paddingRight -= m.length;
+				paddingLeft -= n;
+				paddingRight -= n;
 			}
 			if(m[1])
 				opt['class'] = m[1];
