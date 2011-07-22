@@ -378,7 +378,7 @@ var textile;
 		return out;
 	});
 
-	var re_footnotePhrase = /(^|\S)\[(\d+)\](\S|$)/g;
+	var re_footnotePhrase = /(^|\S)\[(\d+)\]([\s\.,;:?!'"]|$)/g;
 	phraseTypes.push(function(text) {
 		var out = [];
 		var m;
