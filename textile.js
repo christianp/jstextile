@@ -276,6 +276,7 @@ var textile;
 					bit.splice(1,0,tag.open,m[3],tag.close);
 				out = this.joinPhraseBits(out,bit,out.length);
 				text = text.slice(re.lastIndex);
+				re.lastIndex = 0;
 			};
 			if(out.length)
 				out[out.length-1]+=text;
@@ -305,6 +306,7 @@ var textile;
 			var bit = [text.slice(0,m.index)+pre,'<code>'+this.escapeHTML(m[2])+'</code>',post];
 			out = this.joinPhraseBits(out,bit,out.length);
 			text = text.slice(re_codePhrase.lastIndex);
+			re_codePhrase.lastIndex = 0;
 		}
 		if(out.length)
 			out[out.length-1] += text;
@@ -322,6 +324,7 @@ var textile;
 			var bit = [text.slice(0,m.index)+pre,m[2],post];
 			out = this.joinPhraseBits(out,bit,out.length);
 			text = text.slice(re_noTextilePhrase.lastIndex);
+			re_noTextilePhrase.lastIndex = 0;
 		}
 		if(out.length)
 			out[out.length-1] += text;
@@ -344,6 +347,7 @@ var textile;
 			var bit = [text.slice(0,m.index)+pre,tag.open,m[2],tag.close,post];
 			out = this.joinPhraseBits(out,bit,out.length);
 			text = text.slice(re_link.lastIndex);
+			re_link.lastIndex = 0;
 		}
 		if(out.length)
 			out[out.length-1] += text;
@@ -372,6 +376,7 @@ var textile;
 			var bit = [text.slice(0,m.index)+pre,img,post];
 			out = this.joinPhraseBits(out,bit,out.length);
 			text = text.slice(re_image.lastIndex);
+			re_image.lastIndex = 0;
 		}
 		if(out.length)
 			out[out.length-1] += text;
@@ -391,6 +396,7 @@ var textile;
 			var bit = [text.slice(0,m.index)+pre,'<sup class="footnote">'+tag.open+m[2]+tag.close+'</sup>',post];
 			out = this.joinPhraseBits(out,bit,out.length);
 			text = text.slice(re_footnotePhrase.lastIndex);
+			re_footnotePhrase.lastIndex = 0;
 		}
 		if(out.length)
 			out[out.length-1] += text;
@@ -408,6 +414,7 @@ var textile;
 			span = span.slice(re_codeHTMLPhrase.lastIndex);
 			bit = this.convertGlyphs(bit);
 			nspan = this.joinPhraseBits(nspan,[bit,tag],nspan.length+1)
+			re_codeHTMLPhrase.lastIndex = 0;
 		}
 		if(nspan.length)
 			nspan.push(span);
@@ -425,6 +432,7 @@ var textile;
 			span = span.slice(re_notextileHTMLPhrase.lastIndex);
 			bit = this.convertGlyphs(bit);
 			nspan = this.joinPhraseBits(nspan,[bit,tag],nspan.length+1)
+			re_notextileHTMLPhrase.lastIndex = 0;
 		}
 		if(nspan.length)
 			nspan.push(span);
@@ -443,6 +451,7 @@ var textile;
 			span = span.slice(re_simpleTag.lastIndex);
 			bit = this.convertGlyphs(bit);
 			nspan = this.joinPhraseBits(nspan,[bit,tag],nspan.length+1)
+			re_simpleTag.lastIndex = 0;
 		}
 		if(nspan.length)
 			nspan.push(span);
