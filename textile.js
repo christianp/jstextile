@@ -260,7 +260,7 @@ var textile;
 	var shortPunct = '\\.,"\'?!;:';
 	function makeNormalPhraseType(start,tagName,protectContents)
 	{
-		var re = new RegExp('(?:^|\\{|\\[|(['+shortPunct+']|\\s))'+start+'(?:'+re_attr.source+' ?)?([^\\s'+start+']+|\\S[^'+start+'\\n]*[^\\s'+start+'\\n])'+start+'(?:$|[\\]}]|('+re_punct.source+'{1,2}|\\s))','g');
+		var re = new RegExp('(?:^|\\{|\\[|(['+shortPunct+']|\\s|>))'+start+'(?:'+re_attr.source+' ?)?([^\\s'+start+']+|\\S[^'+start+'\\n]*[^\\s'+start+'\\n])'+start+'(?:$|[\\]}]|('+re_punct.source+'{1,2}|\\s))','g');
 		return function(text) {
 			var out = [];
 			var m;

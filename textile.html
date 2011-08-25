@@ -47,6 +47,7 @@
 					equals( textile('2 ^x^'),'<p>2 <sup>x</sup></p>');
 					equals( textile('The %underlying% cause.'),'<p>The <span>underlying</span> cause.</p>','Percentage marks should enclose text with a span tag.');
 					equals( textile('About the @<hr />@ tag.'),'<p>About the <code>&#60;hr /&#62;</code> tag.</p>','at symbols should surround code with a code tag and escape HTML-significant characters.');
+					equals( textile('<span>_hi_ there</span>'),'<p><span><em>hi</em> there</span></p>','Phrase modifier straight after closing a tag should still work.');
 				});
 
 				test("Links",function() {
