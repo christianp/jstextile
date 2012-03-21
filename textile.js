@@ -14,11 +14,9 @@ var textile;
 	TextileConverter.prototype = {
 
 		convert: function() {
-			//console.log(".......");
 			this.src = this.src.replace(/^\n+/,'');
 			while( this.src.length )
 			{
-				//console.log(this.src);
 				for(var i=0;i<blockTypes.length;i++)
 				{
 					if(blockTypes[i].match.apply(this))
