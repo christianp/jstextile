@@ -1,7 +1,7 @@
 var textile;
 (function() {
 	textile = function(src) {
-		tc = new TextileConverter(src);
+		var tc = new TextileConverter(src);
 		return tc.convert();
 	};
 
