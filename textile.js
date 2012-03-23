@@ -799,12 +799,12 @@ var textile;
 
 
 	var re_html = /^<(\w+)((\s+\w+(\s*=\s*(?:".*?"|'.*?'|[^'">\s]+))?)+\s*|\s*)>(.|\n(?!\n))*<\/\1>(\n\n|$)/;
-	var inlineTags = 'a abbr acronym b bdo big br cite code dfn em i img input kbd label q samp select small span strong sub sup textarea tt var notextile'
+	var inlineTags = 'a abbr acronym b bdo big br cite code dfn em i img input kbd label q samp select small span strong sub sup textarea tt var notextile'.split(' ');
 	var htmlBlock = {
 		match: function() { 
 			var m = this.src.match(re_html); 
 			if(m)
-				return inlineTags.search(m[1])==-1;
+				return inlineTags.indexOf(m[1])==-1;
 		},
 		run: function() {
 			var html = re_html.exec(this.src)[0];
