@@ -65,7 +65,6 @@ var textile;
 			//do phrase modifiers
 			for(var i=0;i<phraseTypes.length;i++)
 			{
-				console.log(i);
 				for(var j=0;j<nspan.length;j+=2)
 				{
 					var res = phraseTypes[i].call(this,nspan[j]);
